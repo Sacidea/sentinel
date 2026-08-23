@@ -1,7 +1,7 @@
 # 09 — Repo Yapısı
 
 ```
-iiot-anomaly-detection/
+sentinel/
 ├── AGENTS.md                     # AI ajan talimatları (CLAUDE.md karşılığı)
 ├── README.md
 ├── pyproject.toml                # workspace geneli araç config

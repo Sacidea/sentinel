@@ -1,0 +1,32 @@
+# Workspace geneli araç konfigürasyonu.
+# Her servisin kendi bağımlılıkları kendi pyproject.toml'unda; bu dosya ortak lint/type/test ayarı.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+# E/F: pyflakes+pycodestyle, I: isort, N: pep8-naming, UP: pyupgrade,
+# B: bugbear, C4: comprehensions, SIM: simplify, RUF: ruff-özel
+ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+# domain katmanı için strict hedefi; infrastructure'da gerekirse override edilir.
+
+[[tool.mypy.overrides]]
+module = "*.domain.*"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["services", "libs"]
+python_files = "test_*.py"
+addopts = "-v --strict-markers"
+markers = [
+    "unit: saf birim testleri (I/O yok)",
+    "integration: gerçek Kafka/DB gerektiren testler (testcontainers)",
+]

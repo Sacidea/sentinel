@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Ortam / sırlar
+.env
+*.env
+!.env.example
+
+# Veri ve modeller (büyük dosyalar git-lfs veya harici)
+ml/models/*.pkl
+ml/models/*.joblib
+data/
+*.csv
+!ml/notebooks/*.csv    # küçük örnek veriler istisna
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Docker
+*.log

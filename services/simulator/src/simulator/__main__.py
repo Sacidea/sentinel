@@ -2,6 +2,7 @@ import asyncio
 import signal
 
 import structlog
+
 from simulator.application.runner import SimulatorRunner
 from simulator.config import settings
 from simulator.infrastructure.kafka_publisher import KafkaPublisherAdapter

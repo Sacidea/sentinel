@@ -19,6 +19,7 @@ ml/models/*.joblib
 data/
 *.csv
 !ml/notebooks/*.csv    # küçük örnek veriler istisna
+/*.zip
 
 # IDE / OS
 .idea/

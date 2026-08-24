@@ -18,7 +18,7 @@ Bu sıralama bilinçli: önce açıklanabilir taban, sonra ML zenginleştirmesi.
 
 **Neden sabit (kayan değil):** Veri run-to-failure — kayan pencere baseline'ı bozulan veriyle birlikte kaydırır, yavaş bozulmayı asla yakalayamaz ("baseline drift" / boiling frog). Kestirimci bakımın amacı tam da o yavaş bozulmayı görmek olduğu için baseline sabit kalmalı.
 
-**Kritik doğrulama (spike'ta):** İlk N snapshot'ın gerçekten sağlıklı bölgeye denk geldiği veri keşfinde doğrulanır. Rulman baştan sorunluysa baseline kirlenir — spike bunu yakalamalı.
+**Kritik doğrulama (spike'ta):** Set 2 (`ml/notebooks/ims_set2_spike.md`): ilk 200 snapshot sağlıklı; bearing_1 bozulması ~index 700'de görünür. `BASELINE_WINDOW=200` bu sette kirlenmiyor. Sağlıklı RMS std'si ~0.001 olduğu için ham |z|≥3 çok erken de çalabilir — eşik kalibrasyonu bu ölçeğe göre yapılmalı.
 
 **Soğuk başlangıç (cold start):** Baseline dolana kadar (ilk N snapshot) anomali skoru üretilmez; bu snapshot'lar yalnız baseline'ı beslemek için kullanılır. Event'lerde bu dönem `warming_up` olarak işaretlenebilir.
 

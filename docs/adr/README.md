@@ -8,3 +8,4 @@
 | 0002 | Apache Kafka (Redis Streams değil) | Kabul edildi |
 | 0003 | NASA IMS Bearing veri seti (C-MAPSS değil) | Kabul edildi |
 | 0004 | Chunk'lı snapshot + stateful reassembly | Kabul edildi |
+| 0005 | Oynatma hızı `PLAYBACK_INTERVAL_SEC` ile (`PLAYBACK_SPEED` değil) | Kabul edildi |

@@ -10,7 +10,7 @@ Koda başlamadan önce yapılan işler, sonradan hata ayıklamaktan çok daha uc
 1. **Altyapı ayakta:** `docker compose up` ile Kafka (KRaft), TimescaleDB, Redis, Grafana kalkıyor. Health check'ler yeşil.
 2. **Contracts paketi:** `libs/contracts` içinde en az `RawVibrationWindow` ve `AnomalyDetected` şemaları tanımlı (alanlar dondurulmuş).
 3. **Simülatör (dummy):** Gerçek IMS verisi değil — sabit/rastgele tek bir mesajı belirli aralıkla `sensor.vibration.raw`'a yayınlar. Amaç: Kafka'ya yazma zincirini doğrulamak.
-4. **Stream-processor (pass-through):** Mesajı tüketir, HİÇBİR işlem yapmadan (özellik çıkarımı yok) bir satır olarak TimescaleDB'ye yazar. Amaç: consume + DB write zinciri çalışıyor mu.
+4. **Stream-processor (pass-through):** Mesajı tüketir, gerçek özellik çıkarımı yapmadan `vibration_features` tablosuna tek bir dummy özellik satırı yazar. Ham veri yazılmaz; bu, 14-veri modelindeki ilkeyi korur. Amaç: consume + DB write zinciri çalışıyor mu.
 5. **DB → Grafana:** Grafana TimescaleDB'ye bağlanır, o satırları basit bir tabloda/grafikte gösterir. Amaç: veri uçtan uca görünüyor mu.
 6. **Notifier (stub):** `anomaly.detected` topic'ini dinler; bir mesaj gelince gerçek Telegram yerine sadece log basar. Amaç: bildirim zinciri bağlı mı.
 

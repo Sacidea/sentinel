@@ -1,0 +1,6 @@
+# ML Models
+# Egitilmis model artefaktlari bu dizinde saklanir.
+# Buyuk dosyalar icin git-lfs veya .gitignore kullanilir.
+*.pkl
+*.joblib
+*.onnx

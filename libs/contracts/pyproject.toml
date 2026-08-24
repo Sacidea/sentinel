@@ -1,0 +1,15 @@
+[project]
+name = "libs-contracts"
+version = "0.1.0"
+description = "Sentinel servisleri arasi paylasilan event semalari"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

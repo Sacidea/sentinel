@@ -9,23 +9,46 @@ target-version = "py311"
 select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
 # E/F: pyflakes+pycodestyle, I: isort, N: pep8-naming, UP: pyupgrade,
 # B: bugbear, C4: comprehensions, SIM: simplify, RUF: ruff-özel
-ignore = []
+ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+explicit_package_bases = true
+mypy_path = [
+    "libs/contracts/src",
+    "services/simulator/src",
+    "services/stream-processor/src",
+    "services/notifier/src",
+    "services/dashboard/src",
+]
 # domain katmanı için strict hedefi; infrastructure'da gerekirse override edilir.
 
 [[tool.mypy.overrides]]
 module = "*.domain.*"
 strict = true
 
+[[tool.mypy.overrides]]
+module = "aiokafka.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "psycopg.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["services", "libs"]
+pythonpath = [
+    "libs/contracts/src",
+    "services/simulator/src",
+    "services/stream-processor/src",
+    "services/notifier/src",
+    "services/dashboard/src",
+]
 python_files = "test_*.py"
-addopts = "-v --strict-markers"
+addopts = "-v --strict-markers --import-mode=importlib"
 markers = [
     "unit: saf birim testleri (I/O yok)",
     "integration: gerçek Kafka/DB gerektiren testler (testcontainers)",

@@ -31,7 +31,13 @@ Bu sıralama bilinçli: önce açıklanabilir taban, sonra ML zenginleştirmesi.
 | **Kurtosis** | Sinyaldeki ani darbeler (impulsiveness); yüzey çatlağı/pitting | **Erken** uyarı |
 | **RMS** | Genel titreşim enerjisi/şiddeti | **Geç** ama kesin |
 
-**Neden bu ikisi ve neden ayrı:** Farklı arıza evrelerini yakalarlar. Kurtosis erken çatlakta yükselir; ileri evrede bazen düşer (darbeler yüzeye yayılıp normalleşir) ama RMS yükselmeye devam eder. Biri diğerinin kör noktasını kapatır. Crest factor eklenmedi — RMS/kurtosis ile korelasyonlu, bağımsız sinyal katmıyor.
+**Neden bu ikisi ve neden ayrı:** Farklı arıza evrelerini yakalarlar. Kurtosis erken çatlakta yükselir; ileri evrede bazen düşer (darbeler yüzeye yayılıp normalleşir) ama RMS yükselmeye devam eder. Biri diğerinin kör noktasını kapatır. Crest factor **skorlanmıyor** — RMS/kurtosis ile korelasyonlu, bağımsız sinyal katmıyor.
+
+**Skorlama ≠ kayıt:** `domain/features.py` her pencere için dört özelliği de (RMS, kurtosis, crest factor, peak) çıkarır ve `VibrationFeatures` event'i hepsini taşır; `vibration_features` tablosuna yazılır. Z-Score yalnız yukarıdaki iki özelliğe uygulanır. Crest/peak kalibrasyon ve sonraki analiz (ML katmanı, 02) için saklanır.
+
+**Kurtosis tanımı:** Pearson (dördüncü standartlaştırılmış moment) — normal dağılım için ≈ 3. Fisher/excess tanımı (normal = 0) kullanılmıyor; rulman izleme literatüründeki "sağlıklı ≈ 3, bozulmada yükselir" yorumu bu ölçeğe dayanıyor. Baseline zaten veriden öğrenildiği için eşikler ölçekten bağımsız, ama ham değerleri Grafana'da okurken bu tanım geçerli.
+
+**Tanımsız durumlar:** Sessiz sensörde (RMS 0) crest factor, sabit sinyalde (std 0) kurtosis tanımsız; ikisi de sıfıra bölme yerine `0.0` döner — pipeline çökmez. NaN/inf içeren pencere ise özelliğe dönüşmez, hata fırlatır ve çağıran DLQ'ya yollar (bkz. 06, 07).
 
 ## Z-Score Hesabı
 

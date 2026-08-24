@@ -45,7 +45,8 @@ Her yeni snapshot'ın her özelliği için:
 ```
 z = (value - baseline.mean) / baseline.std
 ```
-- `baseline.std == 0` koruması: sıfıra bölme olmaz; std çok küçükse küçük bir epsilon eklenir veya o metrik atlanır (domain'de kontrol).
+- `baseline.std == 0` koruması: sıfıra bölme olmaz. Std sayısal olarak sıfırsa (≤ 1e-12) **o metrik atlanır** — epsilon eklenmez; aksi halde sabit sinyalde minik bir sapma sahte critical üretir.
+- Std, baseline penceresinin **popülasyon** sapmasıdır (`ddof=0`): pencere "normal"in kendisi kabul edilir, örneklem tahmini değil.
 - Z-Score **işaretli** tutulur ama eşik **mutlak değere** göre değerlendirilir (hem ani düşüş hem ani yükseliş anomali olabilir; özellikle kurtosis'in düşmesi ileri arıza işareti).
 
 ## Hareketli Ortalama (Gürültü Bastırma)
@@ -53,6 +54,7 @@ z = (value - baseline.mean) / baseline.std
 Tek bir snapshot'ın Z-Score'u gürültülü olabilir (anlık sıçrama). Yanlış pozitifi azaltmak için:
 - Z-Score, son `MA_WINDOW` snapshot (varsayılan 5) üzerinde hareketli ortalamayla yumuşatılır.
 - Alarm, **yumuşatılmış** Z-Score eşik aştığında çalar — tek bir gürültülü örnek tek başına alarm üretmez.
+- MA penceresi dolmadan severity üretilmez (`warming_up` bittikten sonra da ilk `MA_WINDOW-1` skor `normal` kalır). Debounce (Telegram) ayrıdır ve application katmanındadır.
 - Bu, "sürekli alarm veren sistem işe yaramaz" (05) ilkesinin somut önlemi.
 
 ## Warning / Critical Mantığı

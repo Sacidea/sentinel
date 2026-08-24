@@ -42,7 +42,11 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: sensor.vibration.raw
       DATASET_PATH: /data/ims
+      PLAYBACK_INTERVAL_SEC: ${PLAYBACK_INTERVAL_SEC:-1.0}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      # IMS dosyaları buraya konur; klasör boşsa simülatör sentetik veri üretir.
+      - ${IMS_DATA_PATH:-./data/ims}:/data/ims:ro
 
   stream-processor:
     build:

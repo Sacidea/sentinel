@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
 from typing import Literal
 
+import pytest
 from simulator.domain.chunking import create_chunks
 
 
+@pytest.mark.unit
 def test_create_chunks_with_valid_samples() -> None:
     # Arrange
     samples = [float(i) for i in range(20480)]
@@ -33,6 +35,7 @@ def test_create_chunks_with_valid_samples() -> None:
     assert chunks[0].samples[-1] == 2559.0
 
 
+@pytest.mark.unit
 def test_create_chunks_with_empty_samples() -> None:
     # Arrange
     samples: list[float] = []
@@ -44,6 +47,7 @@ def test_create_chunks_with_empty_samples() -> None:
     assert len(chunks) == 0
 
 
+@pytest.mark.unit
 def test_create_chunks_indivisible_total() -> None:
     # Arrange
     samples = [1.0, 2.0, 3.0, 4.0, 5.0]

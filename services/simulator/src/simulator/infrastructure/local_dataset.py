@@ -19,11 +19,18 @@ class LocalDatasetAdapter(DatasetProvider):
 
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
-        self._is_synthetic = not os.path.exists(dataset_path) or not os.path.isdir(dataset_path)
+        self._is_synthetic = not self._has_dataset_files(dataset_path)
         if self._is_synthetic:
             logger.warning(
                 "Dataset bulunamadı; sentetik veri moduna geçiliyor.", dataset_path=dataset_path
             )
+
+    @staticmethod
+    def _has_dataset_files(dataset_path: str) -> bool:
+        """Boş bir klasör de 'veri yok' sayılır; aksi halde simülatör hemen sonlanır."""
+        if not os.path.isdir(dataset_path):
+            return False
+        return any(entry.is_file() for entry in os.scandir(dataset_path))
 
     async def stream_snapshots(
         self,
@@ -63,8 +70,11 @@ class LocalDatasetAdapter(DatasetProvider):
                 continue
 
             # Dosya adı formatı genelde: 2003.10.22.12.06.24 (Y.m.d.H.M.S)
+            # TIMESTAMPTZ kolonuna gittiği için naive değer bırakılmaz; UTC olarak işaretlenir.
             try:
-                source_timestamp = datetime.strptime(filename, "%Y.%m.%d.%H.%M.%S")
+                source_timestamp = datetime.strptime(filename, "%Y.%m.%d.%H.%M.%S").replace(
+                    tzinfo=UTC
+                )
             except ValueError:
                 source_timestamp = datetime.now(UTC)
 

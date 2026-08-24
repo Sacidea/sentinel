@@ -60,6 +60,17 @@ class DetectionResult:
     detector: str = DETECTOR_NAME
 
 
+@dataclass(frozen=True)
+class BaselineSnapshot:
+    """Donmuş bir `(machine_id, axis, metric)` baseline'ı; uygulama kalıcı yazar."""
+
+    machine_id: str
+    axis: str
+    metric: MetricName
+    mean: float
+    std: float
+
+
 @dataclass
 class _MetricTrack:
     warmup: list[float]
@@ -67,6 +78,7 @@ class _MetricTrack:
     mean: float | None = None
     std: float | None = None
     skipped: bool = False
+    frozen: bool = False
 
 
 class ZScoreDetector:
@@ -94,18 +106,23 @@ class ZScoreDetector:
         self._warning_threshold = warning_threshold
         self._critical_threshold = critical_threshold
         self._series: dict[tuple[str, str], dict[MetricName, _MetricTrack]] = {}
+        self._pending_frozen: list[BaselineSnapshot] = []
 
     def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
         """Bir snapshot'ın özelliklerini baseline'a ekler veya skorlar."""
         values = _finite_metric_values(features)
         tracks = self._series.setdefault((machine_id, axis), self._new_tracks())
-        sample_count = len(next(iter(tracks.values())).warmup)
+        still_warming = not all(track.frozen for track in tracks.values())
 
-        if sample_count < self._baseline_window:
-            for metric, value in values.items():
-                tracks[metric].warmup.append(value)
-            if sample_count + 1 == self._baseline_window:
-                self._freeze(tracks)
+        for metric, value in values.items():
+            track = tracks[metric]
+            if track.frozen:
+                continue
+            track.warmup.append(value)
+            if len(track.warmup) >= self._baseline_window:
+                self._freeze_track(machine_id, axis, metric, track)
+
+        if still_warming:
             return DetectionResult(status=DetectionStatus.WARMING_UP, scores=())
 
         scored: list[MetricScore] = []
@@ -136,14 +153,45 @@ class ZScoreDetector:
             for metric in SCORED_METRICS
         }
 
-    def _freeze(self, tracks: dict[MetricName, _MetricTrack]) -> None:
-        for track in tracks.values():
-            mean = sum(track.warmup) / len(track.warmup)
-            variance = sum((sample - mean) ** 2 for sample in track.warmup) / len(track.warmup)
-            std = variance**0.5
-            track.mean = mean
-            track.std = std
-            track.skipped = std <= _MIN_BASELINE_STD
+    def seed_baseline(self, snapshot: BaselineSnapshot) -> None:
+        """Kayıtlı baseline'ı yükler; warmup atlanır (restart'ta boiling frog olmasın)."""
+        tracks = self._series.setdefault((snapshot.machine_id, snapshot.axis), self._new_tracks())
+        track = tracks[snapshot.metric]
+        track.mean = snapshot.mean
+        track.std = snapshot.std
+        track.skipped = snapshot.std <= _MIN_BASELINE_STD
+        track.frozen = True
+        track.warmup.clear()
+
+    def drain_frozen(self) -> tuple[BaselineSnapshot, ...]:
+        """Son observe'da yeni donan baseline'lar; bir kez okunur."""
+        frozen = tuple(self._pending_frozen)
+        self._pending_frozen.clear()
+        return frozen
+
+    def _freeze_track(
+        self,
+        machine_id: str,
+        axis: str,
+        metric: MetricName,
+        track: _MetricTrack,
+    ) -> None:
+        mean = sum(track.warmup) / len(track.warmup)
+        variance = sum((sample - mean) ** 2 for sample in track.warmup) / len(track.warmup)
+        std = variance**0.5
+        track.mean = mean
+        track.std = std
+        track.skipped = std <= _MIN_BASELINE_STD
+        track.frozen = True
+        self._pending_frozen.append(
+            BaselineSnapshot(
+                machine_id=machine_id,
+                axis=axis,
+                metric=metric,
+                mean=mean,
+                std=std,
+            )
+        )
 
     def _score_metric(
         self,

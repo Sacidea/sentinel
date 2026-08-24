@@ -72,7 +72,7 @@ Tek bir snapshot'ın Z-Score'u gürültülü olabilir (anlık sıçrama). Yanlı
 ## Alarm Gürültü Kontrolü (Debounce)
 
 Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam).
-- Aynı `(machine_id, metric, severity)` için son bildirimden bu yana `ALARM_COOLDOWN` (varsayılan 60 sn playback zamanı) geçmeden yeni bildirim gönderilmez.
+- Aynı `(machine_id, axis, metric, severity)` için son bildirimden bu yana `ALARM_COOLDOWN` (varsayılan 60 sn playback zamanı) geçmeden yeni bildirim gönderilmez. Eksen seri kimliğinin parçasıdır; x ve y birbirini susturmaz.
 - Kayıt (`anomaly_events`) yine de her tespitte yazılır; sadece *bildirim* debounce edilir. (Kayıt ≠ bildirim ayrımı.)
 
 ## Değerlendirme (05 ile bağlantılı)

@@ -1,0 +1,104 @@
+{
+  "uid": "sentinel-vibration-features",
+  "title": "Vibration Features",
+  "tags": ["sentinel", "walking-skeleton"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Dummy RMS (iskelet: 0.0 beklenir)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", rms AS value, machine_id AS metric FROM vibration_features WHERE $__timeFilter(time) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Dummy kurtosis (iskelet: 0.0 beklenir)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", kurtosis AS value, machine_id AS metric FROM vibration_features WHERE $__timeFilter(time) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Son özellik satırları",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, is_complete, chunks_received FROM vibration_features WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 200"
+        }
+      ]
+    }
+  ]
+}

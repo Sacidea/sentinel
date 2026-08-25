@@ -1,5 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from stream_processor.domain.detectors import (
+    DEFAULT_ZSCORE_CRITICAL,
+    DEFAULT_ZSCORE_WARNING,
+)
+
 
 class Settings(BaseSettings):
     """Stream processor çalışma ayarlarını ortam değişkenlerinden okur."""
@@ -22,8 +27,8 @@ class Settings(BaseSettings):
 
     BASELINE_WINDOW: int = 200
     MA_WINDOW: int = 5
-    ANOMALY_ZSCORE_WARNING: float = 3.0
-    ANOMALY_ZSCORE_CRITICAL: float = 5.0
+    ANOMALY_ZSCORE_WARNING: float = DEFAULT_ZSCORE_WARNING
+    ANOMALY_ZSCORE_CRITICAL: float = DEFAULT_ZSCORE_CRITICAL
     ALARM_COOLDOWN: float = 60.0
 
 

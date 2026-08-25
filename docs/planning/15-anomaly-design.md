@@ -18,7 +18,11 @@ Bu sıralama bilinçli: önce açıklanabilir taban, sonra ML zenginleştirmesi.
 
 **Neden sabit (kayan değil):** Veri run-to-failure — kayan pencere baseline'ı bozulan veriyle birlikte kaydırır, yavaş bozulmayı asla yakalayamaz ("baseline drift" / boiling frog). Kestirimci bakımın amacı tam da o yavaş bozulmayı görmek olduğu için baseline sabit kalmalı.
 
-**Kritik doğrulama (spike'ta):** Set 2 (`ml/notebooks/ims_set2_spike.md`): ilk 200 snapshot sağlıklı; bearing_1 bozulması ~index 700'de görünür. `BASELINE_WINDOW=200` bu sette kirlenmiyor. Sağlıklı RMS std'si ~0.001 olduğu için ham |z|≥3 çok erken de çalabilir — eşik kalibrasyonu bu ölçeğe göre yapılmalı.
+**Kritik doğrulama (spike + kalibrasyon, ADR-0006):**
+
+- **Arıza çapanı (NASA, göz kararı değil):** Set 2 README: *“At the end of the test-to-failure experiment, outer race failure occurred in bearing 1.”* Incipient timestamp yok. Lead time son dosyaya göredir (index 983, `2004.02.19.06.22.39`; 10 dk aralık). RMS ~index 700 nitel gözlemdir; hesaba girmez. Ayrıntı: `ml/notebooks/ims_set2_spike.md`.
+- **Sonuç:** `BASELINE_WINDOW=200` kirlenmiyor. 3.0/5.0 etiketlenmemiş `bearing_2`'de 13 erken alarm (index 351). **5.0/8.0** ile etiketsiz FP=0; bearing_1 lead **74.5 saat** (index 536→983). Tarama: `ml/notebooks/ims_set2_zscore_calibration.md`.
+- **Sınır:** Eşikler yalnız Set 2'ye kalibre edildi. Set 1/3 veya başka dağılımda yeniden ölçülmeden kullanılmaz (overfitting).
 
 **Soğuk başlangıç (cold start):** Baseline dolana kadar (ilk N snapshot) anomali skoru üretilmez; bu snapshot'lar yalnız baseline'ı beslemek için kullanılır. Event'lerde bu dönem `warming_up` olarak işaretlenebilir.
 
@@ -61,11 +65,12 @@ Tek bir snapshot'ın Z-Score'u gürültülü olabilir (anlık sıçrama). Yanlı
 
 | Seviye | Koşul (yumuşatılmış \|z\|) | Aksiyon |
 |---|---|---|
-| Normal | < `ZSCORE_WARNING` (3.0) | Sadece kaydet |
-| **Warning** | ≥ 3.0 ve < `ZSCORE_CRITICAL` (5.0) | `anomaly.detected` + bildirim |
-| **Critical** | ≥ 5.0 | `anomaly.detected` (critical) + bildirim |
+| Normal | < `ZSCORE_WARNING` (5.0) | Sadece kaydet |
+| **Warning** | ≥ 5.0 ve < `ZSCORE_CRITICAL` (8.0) | `anomaly.detected` + bildirim |
+| **Critical** | ≥ 8.0 | `anomaly.detected` (critical) + bildirim |
 
-- Eşikler `.env`'de (`ANOMALY_ZSCORE_WARNING/CRITICAL`), kalibrasyonla ayarlanır.
+- Eşikler `.env`'de (`ANOMALY_ZSCORE_WARNING/CRITICAL`). **IMS Set 2 kalibrasyonu 5.0/8.0** (ADR-0006); önceki 3.0/5.0 bu ölçekte etiketlenmemiş `bearing_2`'de yanlış pozitif üretti.
+- Bu sayılar **yalnız Set 2** (984 dosya, bearing 1 dış bilezik, test sonu etiketi) üzerinde tarandı. Set 1, Set 3 veya başka bir makine/dağılım için aynı eşikler geçerli sayılmaz — overfitting riski; yeni sette `ims_set2_zscore_calibration.py` eşdeğeri yeniden çalıştırılmalıdır.
 - **Herhangi bir** özellik (RMS *veya* kurtosis) eşiği aşarsa alarm çalar; `AnomalyDetected.metric` alanı hangisinin tetiklediğini belirtir.
 - İki özellik aynı anda tetiklerse iki ayrı event yerine tek event'te en yüksek severity taşınır (event spam önleme).
 
@@ -76,9 +81,9 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 - Kayıt (`anomaly_events`) yine de her tespitte yazılır; sadece *bildirim* debounce edilir. (Kayıt ≠ bildirim ayrımı.)
 
 ## Değerlendirme (05 ile bağlantılı)
-- **Lead time:** İlk warning ile veri setindeki bilinen arıza anı arasındaki süre. Ne kadar erken = o kadar iyi.
-- **Yanlış pozitif:** Baseline sonrası, arıza bölgesi dışında çalan alarmlar.
-- Bu metrikler eşik/pencere kalibrasyonunu yönlendirir.
+- **Lead time (Set 2):** İlk warning ile NASA'nın duyurduğu arıza anı arasındaki süre. Duyuru testin sonudur; çapan son snapshot'tır (`02`: RUL etiketi = son dosya). Formül: `(n - 1 - ilk_warning_index) * 10 dk`. Index 700 kullanılmaz.
+- **Yanlış pozitif (Set 2):** NASA'nın hasar duyurmadığı kanallarda (`bearing_2/3/4`), etiketli kanalın ilk uyarısından önceki alarmlar.
+- Bu metrikler eşik/pencere kalibrasyonunu yönlendirir; başka sete taşınmaz (ADR-0006).
 
 ## Katman 2 — ML Entegrasyonu (özet, detay 02'de)
 - `AnomalyDetector` port'u ardında IsolationForest/PCA/River.
@@ -91,5 +96,6 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 BASELINE_WINDOW=200          # baseline için ilk kaç snapshot
 MA_WINDOW=5                  # Z-Score hareketli ortalama penceresi
 ALARM_COOLDOWN=60            # aynı alarm için bildirim debounce (sn, playback zamanı)
+ANOMALY_ZSCORE_WARNING=5.0   # Set 2; ADR-0006 (3.0/5.0 elendi)
+ANOMALY_ZSCORE_CRITICAL=8.0  # baska sete gecince yeniden olc
 ```
-(ANOMALY_ZSCORE_WARNING/CRITICAL zaten .env'de mevcut.)

@@ -20,11 +20,11 @@ Atılabilir keşif; `extract_features` (Pearson kurtosis) ile ölçüldü. Grafi
 
 ## Yorum
 
-**İlk 200 sağlıklı.** Grafikte kesik çizginin solu düz; bearing_1 arızası ~700 civarında gözle görünür, sonda RMS > 0,7 / kurtosis ~17. Literatürdeki Set 2 “bearing_1 dış bilezik” öyküsü bu eğriyle uyumlu.
+**İlk 200 sağlıklı.** Grafikte kesik çizginin solu düz. NASA Set 2 README arızayı test **sonunda** duyurur (bearing 1 dış bilezik); incipient an vermez. Sonda RMS > 0,7 / kurtosis ~17. RMS’in ~index 700’de gözle yükselmesi nitel gözlemdir, lead time çapanı değildir.
 
-**`BASELINE_WINDOW=200` bu sette kirlenmiyor.** İlk |z|≥3, 200’ün oldukça sağında (bearing_1 RMS index 512 ≈ 85 saat sonra).
+**`BASELINE_WINDOW=200` bu sette kirlenmiyor.** İlk ham |z|≥3, 200’ün oldukça sağında (bearing_1 RMS index 512).
 
-**Kalibrasyon uyarısı:** Sağlıklı RMS std’si çok küçük (~0,001). |z|≥3 mutlak olarak minik bir kayma; bearing_2 index 282’de 3σ’ya değiyor ama grafikte hâlâ “düz”. Canlı alarmı ham 3σ’ya bağlamak erken uyarı verir, yanlış pozitif de üretebilir. Mevcut `MA_WINDOW=5` bunu yumuşatır; eşik kalibrasyonu Set 2 üzerinde yapılmalı.
+**Kalibrasyon (ADR-0006):** Sağlıklı RMS std’si çok küçük (~0,001). MA=5 ile 3.0 eşiği etiketlenmemiş `bearing_2`’de index 351’de çalar. Tarama (`ims_set2_zscore_calibration.md`) **5.0 / 8.0** seçti: etiketsiz FP 13→0; bearing_1 lead time son dosyaya göre **74.5 saat** (index 536→983, 10 dk aralık). Eşikler yalnız Set 2 içindir.
 
 **bearing_3 kurtosis** baseline’da zaten ~4,5 (Gaussian 3 değil). Pearson ölçeği doğru; bu kanal daha darbeli başlıyor, arıza işareti değil.
 

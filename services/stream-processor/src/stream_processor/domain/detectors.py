@@ -20,6 +20,12 @@ from stream_processor.domain.features import SignalFeatures
 
 SCORED_METRICS: tuple[Literal["rms", "kurtosis"], ...] = ("rms", "kurtosis")
 DETECTOR_NAME = "zscore"
+# IMS Set 2 kalibrasyonu (ADR-0006, ml/notebooks/ims_set2_zscore_calibration.md):
+# NASA README: ariza testi sonunda bearing 1 dis bilezik; lead time son dosyaya gore.
+# 3.0 etiketlenmemis bearing_2'de erken alarm; 5.0/8.0 etiketsiz FP=0,
+# bearing_1 lead ~74.5 saat (index 536 -> 983, 10 dk aralik). Yalniz Set 2.
+DEFAULT_ZSCORE_WARNING = 5.0
+DEFAULT_ZSCORE_CRITICAL = 8.0
 # Popülasyon std'si sayısal olarak sıfırsa metrik atlanır; epsilon ile şişirme yok.
 _MIN_BASELINE_STD = 1e-12
 

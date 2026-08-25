@@ -1,7 +1,13 @@
 """Z-Score anomali tespiti — senaryolar docs/planning/15-anomaly-design.md."""
 
 import pytest
-from stream_processor.domain.detectors import BaselineSnapshot, DetectionStatus, ZScoreDetector
+from stream_processor.domain.detectors import (
+    DEFAULT_ZSCORE_CRITICAL,
+    DEFAULT_ZSCORE_WARNING,
+    BaselineSnapshot,
+    DetectionStatus,
+    ZScoreDetector,
+)
 from stream_processor.domain.features import SignalFeatures
 
 # 0, 2, 0, 2 -> mean 1, pop. std 1. Böylece z = value - 1.
@@ -258,3 +264,23 @@ def test_seeded_baseline_skips_warmup_and_keeps_z_score() -> None:
     assert result.status is DetectionStatus.WARNING
     assert result.triggered_z == pytest.approx(3.0)
     assert detector.drain_frozen() == ()
+
+
+@pytest.mark.unit
+def test_calibrated_thresholds_treat_three_sigma_as_normal() -> None:
+    """Set 2 (ADR-0006): |z|=3 saglikli jitter; 5.0/8.0 varsayilanlari bunu alarm saymaz."""
+    detector = _detector(
+        warning_threshold=DEFAULT_ZSCORE_WARNING,
+        critical_threshold=DEFAULT_ZSCORE_CRITICAL,
+    )
+    _warmup(detector)
+
+    three = detector.observe("bearing_1", "x", _features(4.0, 1.0))
+    five = detector.observe("bearing_1", "x", _features(6.0, 1.0))
+    eight = detector.observe("bearing_1", "x", _features(9.0, 1.0))
+
+    assert DEFAULT_ZSCORE_WARNING == 5.0
+    assert DEFAULT_ZSCORE_CRITICAL == 8.0
+    assert three.status is DetectionStatus.NORMAL
+    assert five.status is DetectionStatus.WARNING
+    assert eight.status is DetectionStatus.CRITICAL

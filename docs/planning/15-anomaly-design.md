@@ -86,10 +86,12 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 - Bu metrikler eşik/pencere kalibrasyonunu yönlendirir; başka sete taşınmaz (ADR-0006).
 
 ## Katman 2 — ML Entegrasyonu (özet, detay 02'de)
-- `AnomalyDetector` port'u ardında IsolationForest/PCA/River.
-- Girdi: aynı çıkarılmış özellik vektörü (RMS, kurtosis, crest, FFT bantları).
-- `anomaly_events.detector` alanı hangi katmanın bulduğunu ayırt eder (`zscore` / `isolation_forest` / `pca`).
-- Katman 1 ile katman 2 aynı anda çalışabilir; farklı tespitler karşılaştırılabilir (hangisi daha erken/az yanlış pozitif).
+- `AnomalyDetector` port'u ardında IsolationForest / PCA (Hotelling T² + SPE) / River HalfSpaceTrees.
+- Girdi: aynı dört özellik (RMS, kurtosis, crest, peak). FFT bantları henüz yok.
+- Soğuk başlangıç Z-Score ile aynı `BASELINE_WINDOW`; **sonra freeze** (boiling frog — River da online güncellenmez).
+- `anomaly_events.detector` alanı katmanı ayırt eder (`zscore` / `isolation_forest` / `pca` / `river`).
+- Katman 1 ile 2 aynı snapshot'ta paralel çalışır; debounce anahtarına `detector` dahildir.
+- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler eğitim skor max'ı + yayılım payı (0.5/0.25/`1e-3` — config değil, taranmadı). Isolation Forest yol uzunluğu doyunca ölçeklenmiş max-norm zarfı yedek. **Set 2 taraması yok** (ADR-0007); birim testler sentetik vektör kullanır (`8/25/20/12` eşik değil). FFT bantları yazılmadı, şemada boş durur (erteleme, silme değil).
 
 ## Yeni Config Değişkenleri
 ```
@@ -98,4 +100,5 @@ MA_WINDOW=5                  # Z-Score hareketli ortalama penceresi
 ALARM_COOLDOWN=60            # aynı alarm için bildirim debounce (sn, playback zamanı)
 ANOMALY_ZSCORE_WARNING=5.0   # Set 2; ADR-0006 (3.0/5.0 elendi)
 ANOMALY_ZSCORE_CRITICAL=8.0  # baska sete gecince yeniden olc
+ML_LAYER_ENABLED=true        # IsolationForest + PCA + River
 ```

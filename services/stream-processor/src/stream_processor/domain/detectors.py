@@ -60,7 +60,7 @@ class DetectionResult:
 
     status: DetectionStatus
     scores: tuple[MetricScore, ...]
-    triggered_metric: MetricName | None = None
+    triggered_metric: str | None = None
     triggered_value: float | None = None
     triggered_z: float | None = None
     detector: str = DETECTOR_NAME

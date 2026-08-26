@@ -1,8 +1,9 @@
-"""Ham chunk tüketimi: reassembly → özellik → Z-Score → kalıcı kayıt / bildirim."""
+"""Ham chunk tüketimi: reassembly → özellik → Katman 1+2 → kalıcı kayıt / bildirim."""
 
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 
 import structlog
 from contracts.events import RawVibrationWindow
@@ -16,6 +17,7 @@ from stream_processor.application.snapshot_buffer import (
 from stream_processor.application.snapshot_pipeline import process_closed_snapshot
 from stream_processor.domain.detectors import ZScoreDetector
 from stream_processor.ports.consumer import RawWindowConsumer
+from stream_processor.ports.detector import AnomalyDetector
 from stream_processor.ports.publisher import AnomalyPublisher, DeadLetterPublisher
 from stream_processor.ports.repository import (
     AnomalyRepository,
@@ -40,12 +42,14 @@ class RawWindowIngestion:
         dead_letters: DeadLetterPublisher,
         baselines: BaselineRepository | None = None,
         debounce: AlarmDebounce | None = None,
+        extra_detectors: Sequence[AnomalyDetector] = (),
         *,
         sweep_interval_sec: float = 0.0,
     ) -> None:
         self._consumer = consumer
         self._buffer = buffer
         self._detector = detector
+        self._extra_detectors = extra_detectors
         self._features = features
         self._anomalies = anomalies
         self._anomaly_publisher = anomaly_publisher
@@ -83,7 +87,9 @@ class RawWindowIngestion:
 
     async def _dispatch(self, closed: list[ClosedSnapshot]) -> None:
         for snapshot in closed:
-            outcome = process_closed_snapshot(snapshot, self._detector)
+            outcome = process_closed_snapshot(
+                snapshot, self._detector, extra_detectors=self._extra_detectors
+            )
             if outcome.discard_reason is not None:
                 await self._dead_letters.reject_snapshot(snapshot, reason=outcome.discard_reason)
                 logger.warning(
@@ -98,21 +104,24 @@ class RawWindowIngestion:
             if self._baselines is not None:
                 for frozen in self._detector.drain_frozen():
                     await self._baselines.save_baseline(frozen)
-            if outcome.anomaly is not None:
-                await self._anomalies.save_anomaly(outcome.anomaly)
-                axis = outcome.anomaly.axis or ""
-                if self._debounce.should_notify(
-                    machine_id=outcome.anomaly.machine_id,
-                    axis=axis,
-                    metric=outcome.anomaly.metric,
-                    severity=outcome.anomaly.severity,
-                    at=outcome.anomaly.occurred_at,
-                ):
-                    await self._anomaly_publisher.publish_anomaly(outcome.anomaly)
-                    logger.warning(
-                        "Anomali tespit edildi.",
-                        machine_id=outcome.anomaly.machine_id,
-                        metric=outcome.anomaly.metric,
-                        severity=outcome.anomaly.severity,
-                        z_score=outcome.anomaly.z_score,
-                    )
+            if outcome.anomalies:
+                for event in outcome.anomalies:
+                    await self._anomalies.save_anomaly(event)
+                    axis = event.axis or ""
+                    if self._debounce.should_notify(
+                        machine_id=event.machine_id,
+                        axis=axis,
+                        metric=event.metric,
+                        severity=event.severity,
+                        at=event.occurred_at,
+                        detector=event.detector,
+                    ):
+                        await self._anomaly_publisher.publish_anomaly(event)
+                        logger.warning(
+                            "Anomali tespit edildi.",
+                            machine_id=event.machine_id,
+                            metric=event.metric,
+                            severity=event.severity,
+                            detector=event.detector,
+                            z_score=event.z_score,
+                        )

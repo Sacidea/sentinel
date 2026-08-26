@@ -10,8 +10,8 @@ class AlarmDebounce:
         if cooldown_sec < 0.0:
             raise ValueError("cooldown negatif olamaz.")
         self._cooldown_sec = cooldown_sec
-        # (machine_id, axis, metric, severity) → son bildirim anı (playback zamanı)
-        self._last_notified: dict[tuple[str, str, str, str], datetime] = {}
+        # (machine_id, axis, metric, severity, detector) → son bildirim anı
+        self._last_notified: dict[tuple[str, str, str, str, str], datetime] = {}
 
     def should_notify(
         self,
@@ -21,11 +21,12 @@ class AlarmDebounce:
         metric: str,
         severity: str,
         at: datetime,
+        detector: str = "zscore",
     ) -> bool:
         """İlk alarm ve cooldown sonrası True; aradaki tekrarlar False."""
         if self._cooldown_sec == 0.0:
             return True
-        key = (machine_id, axis, metric, severity)
+        key = (machine_id, axis, metric, severity, detector)
         last = self._last_notified.get(key)
         if last is not None and (at - last).total_seconds() < self._cooldown_sec:
             return False

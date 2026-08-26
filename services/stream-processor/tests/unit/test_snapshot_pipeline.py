@@ -135,6 +135,33 @@ def test_spike_after_baseline_emits_anomaly() -> None:
 
 
 @pytest.mark.unit
+def test_extra_detector_emits_parallel_anomaly() -> None:
+    from stream_processor.domain.detectors import DetectionResult, DetectionStatus
+
+    class _AlwaysWarn:
+        def observe(self, machine_id: str, axis: str, features: object) -> DetectionResult:
+            return DetectionResult(
+                status=DetectionStatus.WARNING,
+                scores=(),
+                triggered_metric="feature_vector",
+                triggered_value=1.0,
+                triggered_z=1.0,
+                detector="isolation_forest",
+            )
+
+    detector = _detector()
+    process_closed_snapshot(_closed([[0.0, 0.0]]), detector)
+    process_closed_snapshot(_closed([[2.0, 2.0]]), detector)
+    spiked = process_closed_snapshot(
+        _closed([[6.0, 6.0]]), detector, extra_detectors=(_AlwaysWarn(),)
+    )
+
+    assert spiked.anomaly is not None
+    names = {event.detector for event in spiked.anomalies}
+    assert names == {"zscore", "isolation_forest"}
+
+
+@pytest.mark.unit
 def test_invalid_samples_are_discarded() -> None:
     closed = _closed([[float("nan")], [0.1]])
     outcome = process_closed_snapshot(closed, _detector())

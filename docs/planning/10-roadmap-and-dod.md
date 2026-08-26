@@ -24,6 +24,8 @@
 - Uçtan uca entegrasyon testi
 - Idempotency + DLQ (bkz. 07)
 
+**Durum:** Katman 2 canlı skorlama warmup+freeze (`ML_LAYER_ENABLED`). River warmup sonrası freeze (boiling frog yok). FFT ertelendi; ML eşikleri Set 2'ye kalibre değil (ADR-0007). Z-Score ayrı, ADR-0006.
+
 ### Hafta 3 — Görselleştirme + Doküman + Cila
 - Grafana dashboard (kod olarak)
 - (Opsiyonel) FastAPI + WebSocket

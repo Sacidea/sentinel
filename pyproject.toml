@@ -38,6 +38,22 @@ ignore_missing_imports = true
 module = "psycopg.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "river.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pybreaker.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["services", "libs"]
 pythonpath = [

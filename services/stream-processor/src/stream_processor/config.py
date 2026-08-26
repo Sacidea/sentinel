@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     ANOMALY_ZSCORE_WARNING: float = DEFAULT_ZSCORE_WARNING
     ANOMALY_ZSCORE_CRITICAL: float = DEFAULT_ZSCORE_CRITICAL
     ALARM_COOLDOWN: float = 60.0
+    ML_LAYER_ENABLED: bool = True
 
 
 settings = Settings()

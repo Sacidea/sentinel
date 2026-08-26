@@ -8,10 +8,16 @@ from stream_processor.application.raw_window_ingestion import RawWindowIngestion
 from stream_processor.application.snapshot_buffer import SnapshotBuffer, reassembly_timeout_sec
 from stream_processor.config import settings
 from stream_processor.domain.detectors import ZScoreDetector
+from stream_processor.domain.ml_detectors import (
+    IsolationForestDetector,
+    PcaDetector,
+    RiverHalfSpaceTreesDetector,
+)
 from stream_processor.infrastructure.kafka_consumer import KafkaRawWindowConsumer
 from stream_processor.infrastructure.kafka_publisher import KafkaDownstreamPublisher
 from stream_processor.infrastructure.timescale_repo import TimescaleRepository
 from stream_processor.logging import setup_logging
+from stream_processor.ports.detector import AnomalyDetector
 
 logger = structlog.get_logger(__name__)
 
@@ -47,6 +53,13 @@ async def main() -> None:
         warning_threshold=settings.ANOMALY_ZSCORE_WARNING,
         critical_threshold=settings.ANOMALY_ZSCORE_CRITICAL,
     )
+    extra_detectors: list[AnomalyDetector] = []
+    if settings.ML_LAYER_ENABLED:
+        extra_detectors = [
+            IsolationForestDetector(baseline_window=settings.BASELINE_WINDOW),
+            PcaDetector(baseline_window=settings.BASELINE_WINDOW),
+            RiverHalfSpaceTreesDetector(baseline_window=settings.BASELINE_WINDOW),
+        ]
     for snapshot in await repository.load_baselines():
         detector.seed_baseline(snapshot)
     ingestion = RawWindowIngestion(
@@ -59,6 +72,7 @@ async def main() -> None:
         publisher,
         baselines=repository,
         debounce=AlarmDebounce(cooldown_sec=settings.ALARM_COOLDOWN),
+        extra_detectors=extra_detectors,
         sweep_interval_sec=min(1.0, timeout_sec),
     )
     await publisher.start()

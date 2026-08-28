@@ -96,7 +96,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, is_complete, chunks_received FROM vibration_features WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 200"
+          "rawSql": "SELECT time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, fft_band_energy, is_complete, chunks_received FROM vibration_features WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 200"
         }
       ]
     },
@@ -149,6 +149,37 @@
           "format": "table",
           "rawQuery": true,
           "rawSql": "SELECT occurred_at, machine_id, detector, score_kind, z_score, anomaly_score, severity, metric FROM anomaly_events WHERE $__timeFilter(occurred_at) ORDER BY occurred_at DESC LIMIT 200"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "BPFO bant enerjisi (teshis yok)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 36 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"time\", (fft_band_energy->>'bpfo')::double precision AS value, machine_id AS metric FROM vibration_features WHERE fft_band_energy IS NOT NULL AND $__timeFilter(time) ORDER BY 1"
         }
       ]
     }

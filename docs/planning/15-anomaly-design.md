@@ -87,7 +87,8 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 
 ## Katman 2 — ML Entegrasyonu (özet, detay 02'de)
 - `AnomalyDetector` port'u ardında IsolationForest / PCA (Hotelling T² + SPE) / River HalfSpaceTrees.
-- Girdi: aynı dört özellik (RMS, kurtosis, crest, peak). FFT bantları henüz yok.
+- Girdi: aynı dört özellik (RMS, kurtosis, crest, peak). FFT bantları **çıkarılır ve
+  kaydedilir** (ADR-0010) ama bu katmanın vektörüne **girmez**; teşhis/alarm yok.
 - Soğuk başlangıç Z-Score ile aynı `BASELINE_WINDOW`; **sonra freeze** (boiling frog — River da online güncellenmez).
 - `anomaly_events.detector` alanı katmanı ayırt eder (`zscore` / `isolation_forest` / `pca` / `river`).
 - Katman 1 ile 2 aynı snapshot'ta paralel çalışır; debounce anahtarına `detector` dahildir.
@@ -97,7 +98,7 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 - **Skor alanları (ADR-0009):** Z-Score `z_score` + `score_kind='zscore'`. IF
   `anomaly_score` + `if_score` veya `extent` (hangisi kazandıysa); `z_score` NULL.
   PCA `pca_t2`/`pca_spe`, River `river`. Event `schema_version=2`.
-- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları yok (ADR-0007). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`.
+- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları kayda gider, tespite girmez (ADR-0010). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`.
 
 ## Yeni Config Değişkenleri
 ```

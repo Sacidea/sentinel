@@ -4,7 +4,7 @@ IsolationForest / PCA / River, Z-Score ile aynı soğuk başlangıcı kullanır:
 öğrenilir ve **sabitlenir**. Run-to-failure'da online güncelleme baseline'ı bozar
 (boiling frog); River HalfSpaceTrees de warmup'tan sonra freeze edilir.
 
-Girdi: RMS, kurtosis, crest factor, peak (FFT bantları henüz yok).
+Girdi: RMS, kurtosis, crest factor, peak (FFT bantlari cikarilir, bu vektore girmez).
 """
 
 from __future__ import annotations

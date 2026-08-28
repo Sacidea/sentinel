@@ -1,6 +1,7 @@
 ﻿# ADR-0007: Katman 2 ML esikleri kalibre degil; FFT bantlari ertelendi
 
-**Durum:** Kısmen yerini aldı [ADR-0008](0008-ml-quantiles-set2.md) (eğitim niceliği Set 2'de tarandı). FFT ertelemesi bu ADR'de durur.
+**Durum:** Kısmen yerini aldı [ADR-0008](0008-ml-quantiles-set2.md) (eğitim niceliği)
+ve [ADR-0010](0010-fft-band-energy.md) (FFT bant çıkarımı; teşhis yok).
 - **Tarih:** 2026-08-26
 
 ## Baglam
@@ -11,7 +12,8 @@ Hafta 2 Isolation Forest / PCA / River canli skorlamaya alindi. Birim testleri y
 
 1. `8.0 / 25 / 20 / 12` uretim esigi degildir. `test_ml_detectors.py` sentetik asiri vektordur (rms, kurtosis, crest, peak). Detector bu sayilari hardcode etmez. Canli warning/critical, her (machine_id, axis) icin warmup egitim skorlarindan turetilir (`_healthy_thresholds`).
 2. Katman 2 Set 2 ye kalibre edilmedi. Lead time / FP taramasi yalniz Z-Score icindir (ADR-0006: 5.0/8.0, bearing_1 ilk warning index 536, lead 74.5 saat son dosyaya). ML gercek IMS dosyalari uzerinde ayni protokolle olculmedi. Yesil testler sentetik vektor + sahte port entegrasyonudur.
-3. FFT bant enerjisi Hafta 2 kapsami disindadir. `extract_features` RMS / kurtosis / crest / peak uretir. `fft_band_energy` semada durur (14) ama doldurulmaz. ML girdisi dort zaman-alani ozelligidir. FFT reddedilmedi; ertelendi.
+3. FFT bant enerjisi **cikarimi** ADR-0010 ile kapanir (teshis/alarm yok).
+   Hafta 2'de ML vektoru hâlâ dort zaman-alani ozelligidir.
 4. Yayilim payi ve IF yedek skoru sihirli sabittir, config degildir, Set 2 taramasindan gelmez. Amac: kucuk N de niceligin max a cokmesi ve Isolation Forest yol uzunlugunun doymasi. Uretim kalibrasyonu sayilmaz.
 
 ### Sihirli sabitler (`domain/ml_detectors.py`)
@@ -32,7 +34,7 @@ Hafta 2 Isolation Forest / PCA / River canli skorlamaya alindi. Birim testleri y
 ## Sonuclar
 
 (+) Katman 2 port + freeze canlidir; `ML_LAYER_ENABLED=false` kapatir.
-(+) Test vektoru ile esik karismaz; FFT ertelemesi yazilidir.
+(+) Test vektoru ile esik karismaz; FFT cikarimi ADR-0010.
 (-) Sentetik asiri vektor IMS lead/FP vermez.
 (-) 0.5 / 0.25 / 1e-3 config te degil; test yesil kalip gercek veri bozulabilir.
 (-) README / 08 FFT vaadini "yapildi" saymaz.

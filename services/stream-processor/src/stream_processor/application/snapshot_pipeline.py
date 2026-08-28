@@ -62,6 +62,7 @@ def process_closed_snapshot(
         peak=extracted.peak,
         is_complete=closed.reason is ClosedReason.COMPLETE,
         chunks_received=assembly.chunks_received,
+        fft_band_energy=dict(extracted.fft_band_energy),
     )
     detections = [detector.observe(assembly.machine_id, assembly.axis, extracted)]
     for extra in extra_detectors:

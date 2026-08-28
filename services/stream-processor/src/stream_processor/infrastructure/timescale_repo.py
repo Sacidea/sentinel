@@ -1,5 +1,6 @@
 from contracts.events import AnomalyDetected, VibrationFeatures
 from psycopg import AsyncConnection
+from psycopg.types.json import Jsonb
 
 from stream_processor.domain.detectors import BaselineSnapshot
 
@@ -14,8 +15,8 @@ class TimescaleRepository:
         query = """
             INSERT INTO vibration_features (
                 time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak,
-                is_complete, chunks_received
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                fft_band_energy, is_complete, chunks_received
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         async with await AsyncConnection.connect(self._dsn) as connection:
             async with connection.cursor() as cursor:
@@ -30,6 +31,7 @@ class TimescaleRepository:
                         features.kurtosis,
                         features.crest_factor,
                         features.peak,
+                        Jsonb(features.fft_band_energy),
                         features.is_complete,
                         features.chunks_received,
                     ),

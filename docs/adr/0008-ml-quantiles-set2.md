@@ -28,7 +28,7 @@ koşuldu. 984 gerçek dosya; sentetik vektör yok.
 5. **Bu nicelikler yalnız IMS Set 2'ye kalibre edilmiştir.** Set 1, Set 3 veya başka
    makine/dağılımda 0.995/0.999 geçerli sayılmaz — ADR-0006 ile aynı overfitting
    sınırı; yeni sette `ims_set2_ml_calibration.py` eşdeğeri yeniden çalıştırılmalıdır.
-6. FFT hâlâ yok (ADR-0007). River taranmadı; kayıt edebilir, Telegram'a çıkmaz.
+6. FFT bant enerjisi cikarilir, tespite girmez (ADR-0010). River taranmadi; kayit edebilir, Telegram'a cikmaz.
 
 Kod: `DEFAULT_ML_WARNING_QUANTILE` / `DEFAULT_ML_CRITICAL_QUANTILE`; `config.py`,
 `.env.example`, compose.

@@ -42,6 +42,7 @@ class VibrationFeatures(BaseModel):
     peak: float
     is_complete: bool
     chunks_received: int
+    fft_band_energy: dict[str, float] = Field(default_factory=dict)
     schema_version: int = 1
 
 

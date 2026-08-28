@@ -96,7 +96,9 @@ NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşi
 
 Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
-- **FFT bant enerjisi** henüz hesaplanmıyor (`fft_band_energy` şemada var, dolmuyor). Frekans-alanı analizi ve arıza tipi ayrımı (BPFO/BPFI) için planlanan gelecek iş — ADR-0007.
+- **FFT bant enerjisi** hesaplanır (`bpfo`/`bpfi`/`bsf`, ZA-2115 merkezleri) ve
+  `fft_band_energy` JSONB'ye yazılır. **Teşhis/alarm yok** — Z-Score/IF vektörüne
+  girmez (ADR-0010). Set 2 BPFO taraması: `ml/notebooks/ims_set2_fft_bands.md`.
 - **Eşikler Set 2'ye kalibre.** Başka test setine (Set 1/3) geçilirse kalibrasyon scripti yeniden çalıştırılmalı.
 - **River** çevrimiçi öğrenme detektörü kayda geçiyor ancak sistematik olarak taranmadı/kalibre edilmedi.
 

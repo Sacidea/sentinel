@@ -22,7 +22,7 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `kurtosis` | `DOUBLE PRECISION` | Basıklık (erken arıza göstergesi) |
 | `crest_factor` | `DOUBLE PRECISION` | Tepe/RMS oranı |
 | `peak` | `DOUBLE PRECISION` | Mutlak tepe genlik |
-| `fft_band_energy` | `JSONB` | Frekans bantlarındaki enerji (opsiyonel, bant→değer) |
+| `fft_band_energy` | `JSONB` | BPFO/BPFI/BSF bant gücü (ADR-0010; teşhis yok). Eski satırlar NULL. |
 | `is_complete` | `BOOLEAN NOT NULL` | Kısmi snapshot'tan mı geldi (bkz. 07) |
 | `chunks_received` | `SMALLINT NOT NULL` | Kaç chunk'tan hesaplandı |
 

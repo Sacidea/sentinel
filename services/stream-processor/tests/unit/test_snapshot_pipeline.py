@@ -96,6 +96,7 @@ def test_complete_snapshot_extracts_features() -> None:
     expected = extract_features([1.0, -1.0, 1.0, -1.0])
     assert outcome.features.rms == expected.rms
     assert outcome.features.kurtosis == expected.kurtosis
+    assert outcome.features.fft_band_energy == expected.fft_band_energy
     assert outcome.features.is_complete is True
     assert outcome.features.chunks_received == 2
 

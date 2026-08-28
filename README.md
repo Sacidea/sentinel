@@ -2,17 +2,38 @@
 
 Gerçek zamanlı endüstriyel titreşim anomali tespiti ve kestirimci bakım sistemi.
 
-Fabrika rulmanlarından gelen titreşim verisini canlı bir akış olarak işleyerek, makine arızalanmadan önce istatistiksel ve makine öğrenmesi tabanlı erken uyarı üretir. Anomaliler bir bildirim kanalına iletilir ve canlı bir panoda görselleştirilir.
+Fabrika rulmanlarından gelen titreşim verisini canlı bir akış olarak işleyerek, makine arızalanmadan önce istatistiksel ve makine öğrenmesi tabanlı erken uyarı üretir. Anomaliler Telegram üzerinden bildirilir ve canlı bir Grafana panosunda görselleştirilir.
 
-> **Durum:** Planlama ve tasarım aşaması tamamlandı; implementasyon başlangıç aşamasında. Tüm mimari ve tasarım kararları `docs/` altında belgelenmiştir.
+> **Durum:** Çalışır durumda. Gerçek NASA IMS Set 2 verisiyle uçtan uca test edildi; dört detektörlü anomali tespiti canlı akışta çalışıyor.
+
+## Sonuçlar (NASA IMS Set 2, gerçek veri)
+
+Set 2'de arızalanan rulman **bearing_1** (dış bilezik arızası, NASA etiketli). Sistem bu rulmanı, arızadan **çok önce** ve düşük yanlış pozitif oranıyla yakaladı.
+
+**Katman karşılaştırması (984 gerçek Set 2 dosyası):**
+
+| Detektör | bearing_1 ilk alarm | Lead time (arıza öncesi) | Yanlış pozitif |
+|---|---:|---|---:|
+| Z-Score (5.0/8.0) | index 536 | 74.5 saat | 0 |
+| **Isolation Forest (seçilen)** | **index 447** | **89.3 saat** | **0** |
+| PCA (Hotelling's T²) | index 398 | 97.5 saat | 3 |
+
+Isolation Forest, Z-Score'a göre ~15 saat daha erken uyardı, aynı sıfır yanlış pozitifle. PCA daha erken ama 3 yanlış pozitif ürettiği için birincil katman seçilmedi (detay: `docs/adr/0008-*`).
+
+**Anomali dağılımı:** Tespit edilen anomalilerin **%97.5'i arızalı bearing_1'de** yoğunlaştı; sağlıklı rulmanlarda (bearing_2/3/4) yanlış pozitif oranı çok düşük — sistem doğru rulmanı ayırt ediyor.
 
 ## Ne Yapar
 
-- **Ingestion:** NASA IMS Bearing titreşim veri seti, kontrollü hızda canlı bir akışa dönüştürülür (asyncio simülatör → Kafka).
-- **İşleme:** Her titreşim penceresinden sinyal özellikleri (RMS, kurtosis, crest factor, FFT bant enerjisi) çıkarılır.
-- **Anomali tespiti:** İki katman — (1) baseline'a göre Z-Score / hareketli ortalama (yorumlanabilir), (2) Isolation Forest / PCA / River (makine öğrenmesi).
-- **Bildirim:** Anomali olayları Telegram üzerinden iletilir (Celery + circuit breaker).
-- **Görselleştirme:** TimescaleDB + Grafana ile canlı pano.
+- **Ingestion:** NASA IMS Bearing titreşim verisi, kontrollü hızda canlı akışa dönüştürülür (asyncio simülatör → Kafka). Her snapshot 8 chunk'a bölünür; stream-processor bunları `machine_id` bazında yeniden birleştirir (stateful reassembly).
+- **İşleme:** Her titreşim penceresinden sinyal özellikleri (RMS, kurtosis, crest factor, peak) çıkarılır.
+- **Anomali tespiti — dört detektör, canlı:**
+  - **Z-Score / hareketli ortalama** — baseline'a göre sapma (yorumlanabilir, birincil bildirim katmanı)
+  - **Isolation Forest** — ağaç tabanlı, ölçeklenmiş zarf skoru
+  - **PCA + Hotelling's T²** — çok değişkenli süreç izleme
+  - **River (HalfSpaceTrees)** — çevrimiçi/artımlı öğrenme
+  - Her detektörün skoru `score_kind` ile ayrı etiketlenir (`zscore`, `if_score`/`extent`, `pca_t2`, `river`).
+- **Bildirim:** Anomaliler Telegram'a iletilir (Celery + circuit breaker). Yalnız `zscore` ve `isolation_forest` yayımlanır; PCA/River kayda geçer ama bildirilmez.
+- **Görselleştirme:** TimescaleDB + Grafana ile canlı pano (RMS, kurtosis trendleri).
 
 ## Mimari
 
@@ -21,74 +42,63 @@ Event-driven, gevşek bağlı servis mimarisi. Servisler birbirini doğrudan ça
 ```
 Simulator ──► Kafka (sensor.vibration.raw) ──► Stream Processor ──┬──► TimescaleDB ──► Grafana
                                                                   │
-                                          Kafka (anomaly.detected)◄┘──► Notifier ──► Telegram
+                                    Kafka (anomaly.detected) ◄────┴──► Notifier ──► Telegram
 ```
 
-Detaylar: [`docs/planning/01-architecture.md`](docs/planning/01-architecture.md)
+Kafka topic'leri: `sensor.vibration.raw` (4 partition = 4 rulman), `sensor.vibration.features`, `anomaly.detected`, `anomaly.dlq`. Detay: [`docs/planning/01-architecture.md`](docs/planning/01-architecture.md)
 
 ## Teknoloji Yığını
 
 | Katman | Teknoloji |
 |---|---|
 | Dil | Python 3.11+ (asyncio) |
-| Akış omurgası | Apache Kafka (aiokafka) |
+| Akış omurgası | Apache Kafka (aiokafka, KRaft mode) |
 | Sinyal işleme | NumPy, SciPy, Pandas |
-| Makine öğrenmesi | scikit-learn, PyOD, River |
-| Depolama | TimescaleDB (PostgreSQL) |
+| Makine öğrenmesi | scikit-learn, River |
+| Depolama | TimescaleDB (PostgreSQL, hypertable) |
 | Bildirim | Celery + Redis + Telegram Bot API + pybreaker |
 | Görselleştirme | Grafana |
 | Konteyner | Docker + Docker Compose |
-| Kod kalitesi | ruff, mypy, pre-commit, pytest |
+| Kod kalitesi | ruff, mypy, pytest |
+
+## Kurulum
+
+```bash
+# 1. Ortam değişkenlerini hazırla
+cp .env.example .env
+# .env içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID alanlarını doldur
+
+# 2. Altyapıyı ayağa kaldır (Kafka, TimescaleDB, Redis, Grafana)
+docker compose up -d --build
+
+# 3. NASA IMS Set 2 verisini data/ims/2nd_test altına yerleştir
+#    (indirme: https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip)
+
+# 4. Testler
+pytest
+```
+
+Grafana panosu `http://localhost:3000` adresinde çalışır.
 
 ## Dokümantasyon
 
 Tüm planlama ve tasarım kararları konu bazında ayrı dosyalarda:
 
-- **[Planlama dokümanları](docs/planning/README.md)** — mimari, veri modeli, anomali tasarımı, test stratejisi, güvenlik, dayanıklılık, yol haritası (16 dosya)
+- **[Planlama dokümanları](docs/planning/README.md)** — mimari, veri modeli, anomali tasarımı, test stratejisi, güvenlik, dayanıklılık, yol haritası
 - **[Karar kayıtları (ADR)](docs/adr/README.md)** — önemli mimari kararların gerekçeli kayıtları
 - **[AGENTS.md](AGENTS.md)** — AI kodlama ajanları için proje kuralları
-
-Başlıca dosyalar:
-
-| Konu | Dosya |
-|---|---|
-| Mimari | [`01-architecture.md`](docs/planning/01-architecture.md) |
-| Veri kaynağı & ML | [`02-data-and-ml.md`](docs/planning/02-data-and-ml.md) |
-| Servis tasarımı & SOLID | [`03-service-design.md`](docs/planning/03-service-design.md) |
-| Veri modeli | [`14-data-model.md`](docs/planning/14-data-model.md) |
-| Anomali tasarımı | [`15-anomaly-design.md`](docs/planning/15-anomaly-design.md) |
-| Yol haritası | [`10-roadmap-and-dod.md`](docs/planning/10-roadmap-and-dod.md) |
-
-## Kurulum (planlanan)
-
-> Servisler henüz implemente ediliyor. Hedeflenen akış:
-
-```bash
-# 1. Ortam değişkenlerini hazırla
-cp templates/.env.example .env
-# .env içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID alanlarını doldur
-
-# 2. Tüm stack'i ayağa kaldır
-make up          # docker compose up -d --build
-
-# 3. Testler
-make test        # veya: make test-unit
-```
-
-Konfigürasyon şablonları (`pre-commit`, `pyproject.toml`, `Makefile`, CI) `templates/` altındadır.
 
 ## Veri Kaynağı
 
 NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşim) sinyali, run-to-failure test verisi. Seçim gerekçesi: [`docs/adr/0003-ims-over-cmapss.md`](docs/adr/0003-ims-over-cmapss.md)
 
-## Yol Haritası
+## Bilinen Sınırlamalar ve Gelecek İş
 
-- **Hafta 0.5:** Proje iskeleti, walking skeleton, contracts
-- **Hafta 1:** Ingestion (simülatör → Kafka)
-- **Hafta 2:** İşleme, anomali tespiti, bildirim
-- **Hafta 3:** Görselleştirme, dokümantasyon
+Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
-Detay: [`docs/planning/10-roadmap-and-dod.md`](docs/planning/10-roadmap-and-dod.md)
+- **FFT bant enerjisi** henüz hesaplanmıyor (`fft_band_energy` şemada var, dolmuyor). Frekans-alanı analizi ve arıza tipi ayrımı (BPFO/BPFI) için planlanan gelecek iş — ADR-0007.
+- **Eşikler Set 2'ye kalibre.** Başka test setine (Set 1/3) geçilirse kalibrasyon scripti yeniden çalıştırılmalı.
+- **River** çevrimiçi öğrenme detektörü kayda geçiyor ancak sistematik olarak taranmadı/kalibre edilmedi.
 
 ## Lisans
 

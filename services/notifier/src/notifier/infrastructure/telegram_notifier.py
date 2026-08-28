@@ -5,6 +5,22 @@ from pybreaker import CircuitBreaker, CircuitBreakerError
 logger = structlog.get_logger(__name__)
 
 
+def format_alert_text(event: AnomalyDetected) -> str:
+    """Telegram metni: Katman 1 z_score, Katman 2 anomaly_score + score_kind."""
+    score = event.reported_score()
+    kind = event.score_kind
+    if kind in (None, "zscore"):
+        score_part = f"z_score={score:.2f}" if score is not None else "z_score=n/a"
+    elif score is not None:
+        score_part = f"{kind}={score:.4g}"
+    else:
+        score_part = f"{kind}=n/a"
+    return (
+        f"Sentinel {event.severity.upper()} {event.detector}\n"
+        f"{event.machine_id} {event.metric}={event.value:.4f} {score_part}"
+    )
+
+
 class LoggingNotifier:
     """Telegram yokken veya token ayarlanmamışken yapılandırılmış loga yazar."""
 
@@ -19,6 +35,9 @@ class LoggingNotifier:
             metric=event.metric,
             severity=event.severity,
             detector=event.detector,
+            score_kind=event.score_kind,
+            z_score=event.z_score,
+            anomaly_score=event.anomaly_score,
         )
 
 
@@ -59,11 +78,7 @@ class TelegramNotifier:
     def _send(self, event: AnomalyDetected) -> None:
         import httpx
 
-        text = (
-            f"Sentinel {event.severity.upper()} {event.detector}\n"
-            f"{event.machine_id} {event.metric}={event.value:.4f} "
-            f"score={event.z_score:.2f}"
-        )
+        text = format_alert_text(event)
         url = f"https://api.telegram.org/bot{self._token}/sendMessage"
         response = httpx.post(
             url,

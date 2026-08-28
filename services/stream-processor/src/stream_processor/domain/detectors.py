@@ -64,6 +64,7 @@ class DetectionResult:
     triggered_value: float | None = None
     triggered_z: float | None = None
     detector: str = DETECTOR_NAME
+    score_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -151,6 +152,7 @@ class ZScoreDetector:
             triggered_metric=triggered.metric,
             triggered_value=triggered.value,
             triggered_z=triggered.smoothed_z,
+            score_kind="zscore",
         )
 
     def _new_tracks(self) -> dict[MetricName, _MetricTrack]:

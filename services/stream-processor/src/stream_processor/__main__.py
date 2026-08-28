@@ -56,9 +56,22 @@ async def main() -> None:
     extra_detectors: list[AnomalyDetector] = []
     if settings.ML_LAYER_ENABLED:
         extra_detectors = [
-            IsolationForestDetector(baseline_window=settings.BASELINE_WINDOW),
-            PcaDetector(baseline_window=settings.BASELINE_WINDOW),
-            RiverHalfSpaceTreesDetector(baseline_window=settings.BASELINE_WINDOW),
+            IsolationForestDetector(
+                baseline_window=settings.BASELINE_WINDOW,
+                warning_quantile=settings.ML_WARNING_QUANTILE,
+                critical_quantile=settings.ML_CRITICAL_QUANTILE,
+                use_extent=True,
+            ),
+            PcaDetector(
+                baseline_window=settings.BASELINE_WINDOW,
+                warning_quantile=settings.ML_WARNING_QUANTILE,
+                critical_quantile=settings.ML_CRITICAL_QUANTILE,
+            ),
+            RiverHalfSpaceTreesDetector(
+                baseline_window=settings.BASELINE_WINDOW,
+                warning_quantile=settings.ML_WARNING_QUANTILE,
+                critical_quantile=settings.ML_CRITICAL_QUANTILE,
+            ),
         ]
     for snapshot in await repository.load_baselines():
         detector.seed_baseline(snapshot)

@@ -46,7 +46,9 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `axis` | `TEXT` | |
 | `metric` | `TEXT NOT NULL` | Hangi özellik tetikledi (örn. `kurtosis`) |
 | `value` | `DOUBLE PRECISION NOT NULL` | Özelliğin değeri |
-| `z_score` | `DOUBLE PRECISION NOT NULL` | Sapma büyüklüğü |
+| `z_score` | `DOUBLE PRECISION` | Katman 1 sapması; Katman 2 NULL (ADR-0009, 002) |
+| `anomaly_score` | `DOUBLE PRECISION` | Katman 2 tetikleyen skor; Katman 1 ve eski satırlar NULL |
+| `score_kind` | `TEXT` | `zscore` / `if_score` / `extent` / `pca_t2` / `pca_spe` / `river` |
 | `severity` | `TEXT NOT NULL` | `warning` / `critical` |
 | `is_complete` | `BOOLEAN NOT NULL` | Kısmi veriden mi (güven göstergesi) |
 | `detector` | `TEXT NOT NULL` | `zscore` / `isolation_forest` / `pca` — hangi model buldu |
@@ -106,7 +108,7 @@ SELECT add_retention_policy('vibration_features', INTERVAL '30 days');
 `anomaly_events` daha uzun tutulur (olaylar değerli, hacim düşük) — retention koymayabilir veya çok uzun tutabiliriz.
 
 ## Migration Stratejisi
-- Şema, `infra/timescaledb/` altında sıralı SQL dosyaları olarak tutulur (`001_init.sql`, `002_hypertables.sql`, `003_caggs.sql` ...).
+- Şema, `infra/timescaledb/` altında sıralı SQL dosyaları olarak tutulur (`001_init.sql`, `002_score_kind.sql`, …).
 - Basit tutulur (Alembic gibi bir araç bu proje için fazla); docker-compose ilk açılışta bu SQL'leri çalıştırır.
 - Her migration idempotent yazılır (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).
 

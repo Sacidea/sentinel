@@ -27,6 +27,9 @@ from stream_processor.ports.repository import (
 
 logger = structlog.get_logger(__name__)
 
+# Kafka → notifier → Telegram. PCA/River kayda yazar, bildirim yok (ADR-0008).
+NOTIFY_DETECTORS = frozenset({"zscore", "isolation_forest"})
+
 
 class RawWindowIngestion:
     """Chunk'ları birleştirir; kapanan snapshot'ları özellik ve anomaliye çevirir."""
@@ -43,6 +46,7 @@ class RawWindowIngestion:
         baselines: BaselineRepository | None = None,
         debounce: AlarmDebounce | None = None,
         extra_detectors: Sequence[AnomalyDetector] = (),
+        notify_detectors: frozenset[str] | None = None,
         *,
         sweep_interval_sec: float = 0.0,
     ) -> None:
@@ -56,6 +60,7 @@ class RawWindowIngestion:
         self._dead_letters = dead_letters
         self._baselines = baselines
         self._debounce = debounce or AlarmDebounce(cooldown_sec=0.0)
+        self._notify_detectors = notify_detectors or NOTIFY_DETECTORS
         self._sweep_interval_sec = sweep_interval_sec
 
     async def run(self) -> None:
@@ -107,6 +112,8 @@ class RawWindowIngestion:
             if outcome.anomalies:
                 for event in outcome.anomalies:
                     await self._anomalies.save_anomaly(event)
+                    if event.detector not in self._notify_detectors:
+                        continue
                     axis = event.axis or ""
                     if self._debounce.should_notify(
                         machine_id=event.machine_id,
@@ -123,5 +130,7 @@ class RawWindowIngestion:
                             metric=event.metric,
                             severity=event.severity,
                             detector=event.detector,
+                            score_kind=event.score_kind,
                             z_score=event.z_score,
+                            anomaly_score=event.anomaly_score,
                         )

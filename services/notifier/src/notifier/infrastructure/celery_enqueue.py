@@ -17,7 +17,7 @@ app.conf.update(
 )
 
 
-@app.task(bind=True, max_retries=3, retry_backoff=True)
+@app.task(bind=True, max_retries=3, retry_backoff=True)  # type: ignore[misc]
 def deliver_anomaly(self: Any, payload: dict[str, object]) -> None:
     """Telegram'a iletir; 5xx retry, 4xx/circuit log (07)."""
     event = AnomalyDetected.model_validate(payload)

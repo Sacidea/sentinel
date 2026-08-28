@@ -132,6 +132,10 @@ def test_spike_after_baseline_emits_anomaly() -> None:
     assert spiked.anomaly.metric == "rms"
     assert spiked.anomaly.detector == "zscore"
     assert spiked.anomaly.is_complete is True
+    assert spiked.anomaly.score_kind == "zscore"
+    assert spiked.anomaly.z_score is not None
+    assert spiked.anomaly.anomaly_score is None
+    assert spiked.anomaly.schema_version == 2
 
 
 @pytest.mark.unit
@@ -147,6 +151,7 @@ def test_extra_detector_emits_parallel_anomaly() -> None:
                 triggered_value=1.0,
                 triggered_z=1.0,
                 detector="isolation_forest",
+                score_kind="if_score",
             )
 
     detector = _detector()
@@ -159,6 +164,10 @@ def test_extra_detector_emits_parallel_anomaly() -> None:
     assert spiked.anomaly is not None
     names = {event.detector for event in spiked.anomalies}
     assert names == {"zscore", "isolation_forest"}
+    forest = next(event for event in spiked.anomalies if event.detector == "isolation_forest")
+    assert forest.z_score is None
+    assert forest.anomaly_score == pytest.approx(1.0)
+    assert forest.score_kind == "if_score"
 
 
 @pytest.mark.unit

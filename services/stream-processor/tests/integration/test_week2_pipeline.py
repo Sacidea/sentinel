@@ -1,4 +1,8 @@
-"""Hafta 2 uçtan uca: chunk → reassembly → Z-Score + Katman 2 (I/O yok, fake port)."""
+"""Hafta 2 uçtan uca: chunk → reassembly → Z-Score + Katman 2.
+
+SENTETIK/fake port; IMS Set 2 dosyasi OKUNMAZ. Gercek veri taramasi:
+`ml/notebooks/ims_set2_ml_calibration.py`.
+"""
 
 import asyncio
 from datetime import UTC, datetime

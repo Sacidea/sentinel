@@ -4,6 +4,10 @@ from stream_processor.domain.detectors import (
     DEFAULT_ZSCORE_CRITICAL,
     DEFAULT_ZSCORE_WARNING,
 )
+from stream_processor.domain.ml_detectors import (
+    DEFAULT_ML_CRITICAL_QUANTILE,
+    DEFAULT_ML_WARNING_QUANTILE,
+)
 
 
 class Settings(BaseSettings):
@@ -31,6 +35,8 @@ class Settings(BaseSettings):
     ANOMALY_ZSCORE_CRITICAL: float = DEFAULT_ZSCORE_CRITICAL
     ALARM_COOLDOWN: float = 60.0
     ML_LAYER_ENABLED: bool = True
+    ML_WARNING_QUANTILE: float = DEFAULT_ML_WARNING_QUANTILE
+    ML_CRITICAL_QUANTILE: float = DEFAULT_ML_CRITICAL_QUANTILE
 
 
 settings = Settings()

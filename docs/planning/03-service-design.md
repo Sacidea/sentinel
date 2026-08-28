@@ -37,18 +37,20 @@ Event modelleri `libs/contracts/` içinde pydantic olarak tanımlanır; tüm ser
 | `sensor.vibration.features` | `VibrationFeatures` | stream-processor | (analizciler) |
 | `anomaly.detected` | `AnomalyDetected` | stream-processor | notifier |
 
-**`AnomalyDetected` alanları (örnek):**
+**`AnomalyDetected` alanları (örnek, `schema_version=2`, ADR-0009):**
 ```
 event_id: UUID
 occurred_at: datetime      # UTC, tz-aware
 machine_id: str
 metric: str
 value: float
-z_score: float
+z_score: float | None      # yalnız Katman 1 (detector=zscore); v1'de her detector
+anomaly_score: float | None  # Katman 2; v1'de yok (default None)
+score_kind: Literal[...] | None  # v2 zorunlu pratikte; v1'de yok, detector'dan türetilir
 severity: Literal["warning", "critical"]
-schema_version: int        # şema evrimi
+schema_version: int        # şema evrimi (1 → 2)
 ```
-`schema_version`, eski/yeni consumer'ların bir arada çalışmasını sağlar — gevşek bağlılığın somut karşılığı.
+`schema_version`, eski/yeni consumer'ların bir arada çalışmasını sağlar — gevşek bağlılığın somut karşılığı. v1 Kafka kalıntısında `anomaly_score`/`score_kind` anahtarı yoktur (opsiyonel); consumer `detector`'dan `score_kind` türetir, skoru `z_score`'dan okur.
 
 
 ## Ham Veri Akışı: Chunk'lı Snapshot (Stateful Reassembly)

@@ -8,7 +8,12 @@ from contracts.events import AnomalyDetected, RawVibrationWindow, VibrationFeatu
 from stream_processor.application.alarm_debounce import AlarmDebounce
 from stream_processor.application.raw_window_ingestion import RawWindowIngestion
 from stream_processor.application.snapshot_buffer import ClosedSnapshot, SnapshotBuffer
-from stream_processor.domain.detectors import BaselineSnapshot, ZScoreDetector
+from stream_processor.domain.detectors import (
+    BaselineSnapshot,
+    DetectionResult,
+    DetectionStatus,
+    ZScoreDetector,
+)
 from stream_processor.ports.consumer import RawWindowHandler
 
 MOMENT = datetime(2004, 2, 12, 10, 32, 39, tzinfo=UTC)
@@ -97,6 +102,7 @@ def _ingestion(
     buffer: SnapshotBuffer | None = None,
     detector: ZScoreDetector | None = None,
     debounce: AlarmDebounce | None = None,
+    extra_detectors: tuple[object, ...] = (),
 ) -> tuple[
     RawWindowIngestion,
     FakeFeatures,
@@ -126,6 +132,7 @@ def _ingestion(
         dead_letters,
         baselines=baselines,
         debounce=debounce,
+        extra_detectors=extra_detectors,
     )
     return ingestion, features, anomalies, publisher, dead_letters, baselines
 
@@ -239,3 +246,39 @@ def test_debounce_records_anomaly_but_skips_second_publish() -> None:
     assert len(anomalies.saved) == 2
     assert len(publisher.published) == 1
     assert publisher.published[0].event_id == anomalies.saved[0].event_id
+
+
+class _WarnPca:
+    def __init__(self) -> None:
+        self._seen = 0
+
+    def observe(self, machine_id: str, axis: str, features: object) -> DetectionResult:
+        self._seen += 1
+        if self._seen <= 2:
+            return DetectionResult(status=DetectionStatus.WARMING_UP, scores=(), detector="pca")
+        return DetectionResult(
+            status=DetectionStatus.WARNING,
+            scores=(),
+            triggered_metric="hotelling_t2",
+            triggered_value=4.0,
+            triggered_z=4.0,
+            detector="pca",
+        )
+
+
+@pytest.mark.unit
+def test_pca_alarm_is_persisted_but_not_published() -> None:
+    windows = [
+        _chunk(0, snapshot_id=uuid4(), samples=[0.0, 0.0], total_chunks=1),
+        _chunk(0, snapshot_id=uuid4(), samples=[2.0, 2.0], total_chunks=1),
+        _chunk(0, snapshot_id=uuid4(), samples=[6.0, 6.0], total_chunks=1),
+    ]
+    ingestion, _, anomalies, publisher, _, _ = _ingestion(windows, extra_detectors=(_WarnPca(),))
+
+    asyncio.run(ingestion.run())
+
+    detectors = [event.detector for event in anomalies.saved]
+    assert "pca" in detectors
+    assert "zscore" in detectors
+    assert all(event.detector != "pca" for event in publisher.published)
+    assert any(event.detector == "zscore" for event in publisher.published)

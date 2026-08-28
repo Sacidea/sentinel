@@ -5,7 +5,11 @@ import pytest
 from contracts.events import AnomalyDetected
 from notifier.application.anomaly_notification import AnomalyNotification
 from notifier.domain.idempotency import SeenEventIds
-from notifier.infrastructure.telegram_notifier import LoggingNotifier, TelegramNotifier
+from notifier.infrastructure.telegram_notifier import (
+    LoggingNotifier,
+    TelegramNotifier,
+    format_alert_text,
+)
 
 
 class _CaptureEnqueue:
@@ -33,6 +37,7 @@ def _event() -> AnomalyDetected:
         metric="rms",
         value=0.3,
         z_score=6.0,
+        score_kind="zscore",
         severity="warning",
         is_complete=True,
         detector="zscore",
@@ -65,3 +70,73 @@ def test_unconfigured_telegram_is_not_configured() -> None:
 def test_non_numeric_chat_id_is_not_configured() -> None:
     notifier = TelegramNotifier("123:token", "not-a-chat-id", fallback=LoggingNotifier())
     assert notifier.configured() is False
+
+
+@pytest.mark.unit
+def test_alert_text_uses_z_score_for_layer1() -> None:
+    text = format_alert_text(_event())
+    assert "z_score=6.00" in text
+    assert "if_score" not in text
+
+
+@pytest.mark.unit
+def test_alert_text_uses_anomaly_score_for_isolation_forest() -> None:
+    event = AnomalyDetected(
+        event_id=uuid4(),
+        occurred_at=datetime(2004, 2, 12, 10, 32, 39, tzinfo=UTC),
+        machine_id="bearing_3",
+        axis="x",
+        metric="feature_vector",
+        value=0.014,
+        z_score=None,
+        anomaly_score=0.014,
+        score_kind="if_score",
+        severity="warning",
+        is_complete=True,
+        detector="isolation_forest",
+    )
+    text = format_alert_text(event)
+    assert "if_score=0.014" in text
+    assert "z_score=" not in text
+
+
+@pytest.mark.unit
+def test_alert_text_v1_isolation_forest_reads_z_score() -> None:
+    event = AnomalyDetected.model_validate(
+        {
+            "event_id": uuid4(),
+            "occurred_at": datetime(2004, 2, 12, 10, 32, 39, tzinfo=UTC),
+            "machine_id": "bearing_3",
+            "axis": "x",
+            "metric": "feature_vector",
+            "value": 0.014,
+            "z_score": 0.014,
+            "severity": "warning",
+            "is_complete": True,
+            "detector": "isolation_forest",
+            "schema_version": 1,
+        }
+    )
+    text = format_alert_text(event)
+    assert "if_score=0.014" in text
+
+
+@pytest.mark.unit
+def test_alert_text_uses_extent_kind() -> None:
+    event = AnomalyDetected(
+        event_id=uuid4(),
+        occurred_at=datetime(2004, 2, 12, 10, 32, 39, tzinfo=UTC),
+        machine_id="bearing_1",
+        axis="x",
+        metric="feature_vector",
+        value=8.65,
+        z_score=None,
+        anomaly_score=8.65,
+        score_kind="extent",
+        severity="critical",
+        is_complete=True,
+        detector="isolation_forest",
+    )
+    text = format_alert_text(event)
+    assert "extent=8.65" in text
+    assert "z_score=" not in text

@@ -40,8 +40,8 @@ class TimescaleRepository:
         query = """
             INSERT INTO anomaly_events (
                 event_id, occurred_at, machine_id, axis, metric, value, z_score,
-                severity, is_complete, detector
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                anomaly_score, score_kind, severity, is_complete, detector
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (event_id) DO NOTHING
         """
         async with await AsyncConnection.connect(self._dsn) as connection:
@@ -56,6 +56,8 @@ class TimescaleRepository:
                         event.metric,
                         event.value,
                         event.z_score,
+                        event.anomaly_score,
+                        event.score_kind,
                         event.severity,
                         event.is_complete,
                         event.detector,

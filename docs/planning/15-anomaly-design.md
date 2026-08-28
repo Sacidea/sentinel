@@ -91,7 +91,13 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 - Soğuk başlangıç Z-Score ile aynı `BASELINE_WINDOW`; **sonra freeze** (boiling frog — River da online güncellenmez).
 - `anomaly_events.detector` alanı katmanı ayırt eder (`zscore` / `isolation_forest` / `pca` / `river`).
 - Katman 1 ile 2 aynı snapshot'ta paralel çalışır; debounce anahtarına `detector` dahildir.
-- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler eğitim skor max'ı + yayılım payı (0.5/0.25/`1e-3` — config değil, taranmadı). Isolation Forest yol uzunluğu doyunca ölçeklenmiş max-norm zarfı yedek. **Set 2 taraması yok** (ADR-0007); birim testler sentetik vektör kullanır (`8/25/20/12` eşik değil). FFT bantları yazılmadı, şemada boş durur (erteleme, silme değil).
+- **Kayıt ≠ bildirim:** `anomaly_events` tüm detector'ları yazar. Kafka/Telegram yalnız
+  `zscore` ve `isolation_forest` (`NOTIFY_DETECTORS`). PCA (Set 2'de FP=3) ve River
+  kayda gider, bildirime çıkmaz (ADR-0008).
+- **Skor alanları (ADR-0009):** Z-Score `z_score` + `score_kind='zscore'`. IF
+  `anomaly_score` + `if_score` veya `extent` (hangisi kazandıysa); `z_score` NULL.
+  PCA `pca_t2`/`pca_spe`, River `river`. Event `schema_version=2`.
+- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları yok (ADR-0007). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`.
 
 ## Yeni Config Değişkenleri
 ```
@@ -101,4 +107,6 @@ ALARM_COOLDOWN=60            # aynı alarm için bildirim debounce (sn, playback
 ANOMALY_ZSCORE_WARNING=5.0   # Set 2; ADR-0006 (3.0/5.0 elendi)
 ANOMALY_ZSCORE_CRITICAL=8.0  # baska sete gecince yeniden olc
 ML_LAYER_ENABLED=true        # IsolationForest + PCA + River
+ML_WARNING_QUANTILE=0.995    # Set 2 IF (ADR-0008)
+ML_CRITICAL_QUANTILE=0.999
 ```

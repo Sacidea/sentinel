@@ -1,6 +1,6 @@
 ﻿# ADR-0007: Katman 2 ML esikleri kalibre degil; FFT bantlari ertelendi
 
-- **Durum:** Kabul edildi
+**Durum:** Kısmen yerini aldı [ADR-0008](0008-ml-quantiles-set2.md) (eğitim niceliği Set 2'de tarandı). FFT ertelemesi bu ADR'de durur.
 - **Tarih:** 2026-08-26
 
 ## Baglam

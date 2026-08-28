@@ -99,6 +99,58 @@
           "rawSql": "SELECT time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, is_complete, chunks_received FROM vibration_features WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 200"
         }
       ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Anomali skoru (z_score veya anomaly_score)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT occurred_at AS \"time\", COALESCE(anomaly_score, z_score) AS value, machine_id || '/' || detector || '/' || COALESCE(score_kind, 'legacy') AS metric FROM anomaly_events WHERE $__timeFilter(occurred_at) ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Son anomali olayları",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT occurred_at, machine_id, detector, score_kind, z_score, anomaly_score, severity, metric FROM anomaly_events WHERE $__timeFilter(occurred_at) ORDER BY occurred_at DESC LIMIT 200"
+        }
+      ]
     }
   ]
 }

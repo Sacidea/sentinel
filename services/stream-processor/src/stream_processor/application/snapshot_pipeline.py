@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID, uuid4
 
-from contracts.events import AnomalyDetected, VibrationFeatures
+from contracts.events import ANOMALY_SCHEMA_VERSION, AnomalyDetected, ScoreKind, VibrationFeatures
 
 from stream_processor.application.snapshot_buffer import ClosedReason, ClosedSnapshot
 from stream_processor.domain.detectors import DetectionResult, DetectionStatus, ZScoreDetector
@@ -105,6 +105,9 @@ def _to_anomaly(
         value = extracted.rms
     if score is None:
         score = 0.0
+    kind = _score_kind(detection)
+    z_score = score if kind == "zscore" else None
+    anomaly_score = None if kind == "zscore" else score
     return AnomalyDetected(
         event_id=event_id,
         occurred_at=features.occurred_at,
@@ -112,8 +115,35 @@ def _to_anomaly(
         axis=features.axis,
         metric=metric,
         value=value,
-        z_score=score,
+        z_score=z_score,
+        anomaly_score=anomaly_score,
+        score_kind=kind,
         severity=severity,
         is_complete=features.is_complete,
         detector=detection.detector,
+        schema_version=ANOMALY_SCHEMA_VERSION,
     )
+
+
+_SCORE_KINDS: dict[str, ScoreKind] = {
+    "zscore": "zscore",
+    "if_score": "if_score",
+    "extent": "extent",
+    "pca_t2": "pca_t2",
+    "pca_spe": "pca_spe",
+    "river": "river",
+}
+
+
+def _score_kind(detection: DetectionResult) -> ScoreKind:
+    """Detector'ın kazanan skor türü; test sahtekarları için detector/metric'ten türet."""
+    named = _SCORE_KINDS.get(detection.score_kind or "")
+    if named is not None:
+        return named
+    if detection.detector == "zscore":
+        return "zscore"
+    if detection.detector == "pca":
+        return "pca_spe" if detection.triggered_metric == "spe" else "pca_t2"
+    if detection.detector == "river":
+        return "river"
+    return "if_score"

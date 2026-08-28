@@ -23,6 +23,9 @@ from stream_processor.domain.features import SignalFeatures
 
 _FEATURE_KEYS = ("rms", "kurtosis", "crest_factor", "peak")
 _MIN_VARIANCE = 1e-12
+# Uretim varsayilani (ADR-0008, Set 2 IF+zarf taramasi). PCA ayni nicelikte FP=3.
+DEFAULT_ML_WARNING_QUANTILE = 0.995
+DEFAULT_ML_CRITICAL_QUANTILE = 0.999
 _SEVERITY_RANK = {
     DetectionStatus.CRITICAL: 2,
     DetectionStatus.WARNING: 1,
@@ -49,20 +52,29 @@ def _as_point(vector: NDArray[np.float64]) -> dict[str, float]:
     return {key: float(vector[index]) for index, key in enumerate(_FEATURE_KEYS)}
 
 
-def _healthy_thresholds(scores: NDArray[np.float64]) -> tuple[float, float] | None:
-    """Eğitim zarfı + pay. Eğitim noktaları ve ufak ekstrapolasyon NORMAL kalır.
+def _validate_quantiles(warning_quantile: float, critical_quantile: float) -> None:
+    if not 0.0 < warning_quantile <= 1.0 or not 0.0 < critical_quantile <= 1.0:
+        raise ValueError("nicelik (0, 1] araliginda olmali.")
+    if warning_quantile > critical_quantile:
+        raise ValueError("warning niceligi critical niceliginden buyuk olamaz.")
 
-    99/99.9 nicelik küçük N'de max'a çöker; bir sonraki sağlıklı nokta (aynı
-    eğilimin bir adım ötesi) yanlış alarm üretir. Pay, yayılım veya |max|
-    üzerinden alınır — Set 2 Z-Score eşikleri gibi kalibre değildir.
+
+def _healthy_thresholds(
+    scores: NDArray[np.float64],
+    *,
+    warning_quantile: float,
+    critical_quantile: float,
+) -> tuple[float, float] | None:
+    """Eğitim skorlarının niceliği. Çarpan/pay yok; eşik veriden türer.
+
+    `score > warning` WARNING, `score > critical` CRITICAL. Eğitim noktalarının
+    çoğu NORMAL kalır (nicelik < 1). N küçükken 0.99 max'a yaklaşır — bu yüzden
+    birim testler sentetiktir; Set 2 taraması ayrıdır.
     """
     if scores.size < 2:
         return None
-    peak = float(np.max(scores))
-    spread = float(np.ptp(scores))
-    floor = max(spread, abs(peak), 1e-3)
-    warning = peak + 0.5 * floor
-    critical = warning + max(spread, abs(peak) * 0.25, 1e-3)
+    warning = float(np.quantile(scores, warning_quantile))
+    critical = float(np.quantile(scores, critical_quantile))
     return warning, critical
 
 
@@ -74,10 +86,6 @@ def _classify(score: float, warning: float, critical: float) -> DetectionStatus:
     return DetectionStatus.NORMAL
 
 
-def _worse(left: DetectionStatus, right: DetectionStatus) -> DetectionStatus:
-    return left if _SEVERITY_RANK[left] >= _SEVERITY_RANK[right] else right
-
-
 def _result(
     status: DetectionStatus,
     *,
@@ -85,6 +93,7 @@ def _result(
     metric: str,
     value: float,
     score: float,
+    score_kind: str = "",
 ) -> DetectionResult:
     if status is DetectionStatus.WARMING_UP:
         return DetectionResult(status=status, scores=(), detector=detector)
@@ -97,6 +106,7 @@ def _result(
         triggered_value=value,
         triggered_z=score,
         detector=detector,
+        score_kind=score_kind,
     )
 
 
@@ -123,11 +133,23 @@ class _WarmupTrack:
 class IsolationForestDetector:
     """Etiketsiz çok değişkenli aykırı; warmup sonrası freeze (planning/02)."""
 
-    def __init__(self, *, baseline_window: int, random_state: int = 42) -> None:
+    def __init__(
+        self,
+        *,
+        baseline_window: int,
+        random_state: int = 42,
+        warning_quantile: float = DEFAULT_ML_WARNING_QUANTILE,
+        critical_quantile: float = DEFAULT_ML_CRITICAL_QUANTILE,
+        use_extent: bool = True,
+    ) -> None:
         if baseline_window < 2:
             raise ValueError("baseline_window en az 2 olmali.")
+        _validate_quantiles(warning_quantile, critical_quantile)
         self._baseline_window = baseline_window
         self._random_state = random_state
+        self._warning_quantile = warning_quantile
+        self._critical_quantile = critical_quantile
+        self._use_extent = use_extent
         self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
 
     def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
@@ -157,21 +179,23 @@ class IsolationForestDetector:
             )
         scaled = track.scaler.transform(vector.reshape(1, -1))
         score = float(-track.forest.decision_function(scaled)[0])
-        extent = float(np.max(np.abs(scaled[0])))
-        status = _worse(
-            _classify(score, track.warning, track.critical),
-            _classify(extent, track.extent_warning, track.extent_critical),
-        )
-        # IF yol uzunluğu uzaktaki noktalarda doyar; predict yedek kalır.
-        if int(track.forest.predict(scaled)[0]) == -1 and status is DetectionStatus.NORMAL:
-            status = DetectionStatus.WARNING
-        triggered = extent if extent > track.extent_warning else score
+        status = _classify(score, track.warning, track.critical)
+        triggered = score
+        score_kind = "if_score"
+        if self._use_extent:
+            extent = float(np.max(np.abs(scaled[0])))
+            extent_status = _classify(extent, track.extent_warning, track.extent_critical)
+            if _SEVERITY_RANK[extent_status] > _SEVERITY_RANK[status]:
+                status = extent_status
+                triggered = extent
+                score_kind = "extent"
         return _result(
             status,
             detector="isolation_forest",
             metric="feature_vector",
             value=triggered,
             score=triggered,
+            score_kind=score_kind,
         )
 
     def _freeze_forest(self, track: _WarmupTrack) -> None:
@@ -189,30 +213,44 @@ class IsolationForestDetector:
         )
         forest.fit(scaled)
         scores = -forest.decision_function(scaled)
-        extents = np.max(np.abs(scaled), axis=1)
-        thresholds = _healthy_thresholds(scores)
-        extent_thresholds = _healthy_thresholds(extents)
+        kwargs = {
+            "warning_quantile": self._warning_quantile,
+            "critical_quantile": self._critical_quantile,
+        }
+        thresholds = _healthy_thresholds(scores, **kwargs)
+        extent_thresholds = _healthy_thresholds(np.max(np.abs(scaled), axis=1), **kwargs)
         track.frozen = True
-        if thresholds is None or extent_thresholds is None:
+        if thresholds is None or (self._use_extent and extent_thresholds is None):
             track.skipped = True
             return
         track.scaler = scaler
         track.forest = forest
         track.warning, track.critical = thresholds
-        track.extent_warning, track.extent_critical = extent_thresholds
+        if extent_thresholds is not None:
+            track.extent_warning, track.extent_critical = extent_thresholds
         track.vectors.clear()
 
 
 class PcaDetector:
     """PCA + Hotelling T² / SPE; warmup sonrası freeze (planning/02)."""
 
-    def __init__(self, *, baseline_window: int, n_components: int = 2) -> None:
+    def __init__(
+        self,
+        *,
+        baseline_window: int,
+        n_components: int = 2,
+        warning_quantile: float = DEFAULT_ML_WARNING_QUANTILE,
+        critical_quantile: float = DEFAULT_ML_CRITICAL_QUANTILE,
+    ) -> None:
         if baseline_window < 3:
             raise ValueError("baseline_window PCA icin en az 3 olmali.")
         if n_components < 1:
             raise ValueError("n_components en az 1 olmali.")
+        _validate_quantiles(warning_quantile, critical_quantile)
         self._baseline_window = baseline_window
         self._n_components = n_components
+        self._warning_quantile = warning_quantile
+        self._critical_quantile = critical_quantile
         self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
 
     def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
@@ -238,8 +276,22 @@ class PcaDetector:
         t2_status = _classify(t2, track.t2_warning, track.t2_critical)
         spe_status = _classify(spe, track.spe_warning, track.spe_critical)
         if _SEVERITY_RANK[spe_status] > _SEVERITY_RANK[t2_status]:
-            return _result(spe_status, detector="pca", metric="spe", value=spe, score=spe)
-        return _result(t2_status, detector="pca", metric="hotelling_t2", value=t2, score=t2)
+            return _result(
+                spe_status,
+                detector="pca",
+                metric="spe",
+                value=spe,
+                score=spe,
+                score_kind="pca_spe",
+            )
+        return _result(
+            t2_status,
+            detector="pca",
+            metric="hotelling_t2",
+            value=t2,
+            score=t2,
+            score_kind="pca_t2",
+        )
 
     def _freeze_pca(self, track: _WarmupTrack) -> None:
         matrix = np.vstack(track.vectors)
@@ -256,8 +308,12 @@ class PcaDetector:
         reconstructed = pca.inverse_transform(components)
         t2 = np.sum((components**2) / eigenvalues, axis=1)
         spe = np.sum((scaled - reconstructed) ** 2, axis=1)
-        t2_thr = _healthy_thresholds(t2)
-        spe_thr = _healthy_thresholds(spe)
+        kwargs = {
+            "warning_quantile": self._warning_quantile,
+            "critical_quantile": self._critical_quantile,
+        }
+        t2_thr = _healthy_thresholds(t2, **kwargs)
+        spe_thr = _healthy_thresholds(spe, **kwargs)
         track.frozen = True
         if t2_thr is None and spe_thr is None:
             track.skipped = True
@@ -279,11 +335,21 @@ class PcaDetector:
 class RiverHalfSpaceTreesDetector:
     """Online HalfSpaceTrees; warmup boyunca öğrenir, sonra freeze (boiling frog)."""
 
-    def __init__(self, *, baseline_window: int, seed: int = 42) -> None:
+    def __init__(
+        self,
+        *,
+        baseline_window: int,
+        seed: int = 42,
+        warning_quantile: float = DEFAULT_ML_WARNING_QUANTILE,
+        critical_quantile: float = DEFAULT_ML_CRITICAL_QUANTILE,
+    ) -> None:
         if baseline_window < 2:
             raise ValueError("baseline_window en az 2 olmali.")
+        _validate_quantiles(warning_quantile, critical_quantile)
         self._baseline_window = baseline_window
         self._seed = seed
+        self._warning_quantile = warning_quantile
+        self._critical_quantile = critical_quantile
         self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
 
     def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
@@ -315,7 +381,11 @@ class RiverHalfSpaceTreesDetector:
                 [float(model.score_one(_as_point(row))) for row in track.vectors],
                 dtype=np.float64,
             )
-            thresholds = _healthy_thresholds(scores)
+            thresholds = _healthy_thresholds(
+                scores,
+                warning_quantile=self._warning_quantile,
+                critical_quantile=self._critical_quantile,
+            )
             track.frozen = True
             track.vectors.clear()
             if thresholds is None:
@@ -339,4 +409,5 @@ class RiverHalfSpaceTreesDetector:
             metric="half_space_trees",
             value=score,
             score=score,
+            score_kind="river",
         )

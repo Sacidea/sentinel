@@ -8,7 +8,8 @@
 
 Plan (14, README) `fft_band_energy` sozunu veriyordu; Hafta 2 borusu FFT'siz akti.
 Z-Score/IF Set 2'de zaman-alani ile kalibre. Frekans-alani **teshis** (BPFO=dis
-bilezik karari) ayri bir is; once enerjinin hesaplanip saklanmasi gerekir.
+bilezik karari) ayri bir is (ADR-0011, offline); once enerjinin hesaplanip
+saklanmasi gerekir.
 
 ## Karar
 
@@ -30,10 +31,10 @@ bilezik karari) ayri bir is; once enerjinin hesaplanip saklanmasi gerekir.
 
 - **FFT'yi IF vektorune eklemek:** Set 2 IF karnesini gecersiz kilar; elendi.
 - **Ham spektrumu JSONB'ye yazmak:** 10k bin/satir; elendi.
-- **Teshis esigi (BPFO > esik → dis bilezik):** bu turun kapsami disi.
+- **Teshis esigi (BPFO > esik → dis bilezik):** ADR-0011 (offline; canli yok).
 
 ## Sonuclar
 
-(+) Grafana/DB'de bant trendi gorulur; teshis sonraki is.
+(+) Grafana/DB'de bant trendi gorulur; teshis kurali ADR-0011 (canli yazim yok).
 (−) Merkezler yalniz ZA-2115 / Set 2. Baska rulman geometrisi sabitleri degistirir.
 (−) ADR-0007'deki "FFT hic yok" ifadesi cikarim icin yerini alir; ML vektoru FFT'siz kalir.

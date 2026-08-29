@@ -242,3 +242,23 @@ def test_inconsistent_chunk_is_reported_for_dlq() -> None:
 
     assert result.disposition is ChunkDisposition.INCONSISTENT
     assert buffer.pending_count == 1
+
+
+@pytest.mark.unit
+def test_same_bearing_x_and_y_complete_when_snapshot_ids_differ() -> None:
+    clock = FakeClock()
+    buffer = _buffer(clock)
+    id_x = uuid4()
+    id_y = uuid4()
+
+    closed_x: list[str] = []
+    closed_y: list[str] = []
+    for index in range(8):
+        result_x = buffer.add(_chunk(index, snapshot_id=id_x, machine_id="bearing_3", axis="x"))
+        result_y = buffer.add(_chunk(index, snapshot_id=id_y, machine_id="bearing_3", axis="y"))
+        closed_x.extend(item.assembly.axis for item in result_x.closed)
+        closed_y.extend(item.assembly.axis for item in result_y.closed)
+
+    assert closed_x == ["x"]
+    assert closed_y == ["y"]
+    assert buffer.pending_count == 0

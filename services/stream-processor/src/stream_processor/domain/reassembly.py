@@ -26,6 +26,7 @@ class SnapshotAssembly:
         self.snapshot_id = first_chunk.snapshot_id
         self.machine_id = first_chunk.machine_id
         self.axis = first_chunk.axis
+        self.dataset = first_chunk.dataset
         self.total_chunks = first_chunk.total_chunks
         self.occurred_at = first_chunk.occurred_at
         self.source_timestamp = first_chunk.source_timestamp
@@ -65,6 +66,7 @@ class SnapshotAssembly:
             chunk.snapshot_id == self.snapshot_id
             and chunk.machine_id == self.machine_id
             and chunk.axis == self.axis
+            and chunk.dataset == self.dataset
             and chunk.total_chunks == self.total_chunks
             and chunk.chunk_index < self.total_chunks
         )

@@ -11,6 +11,8 @@ def create_chunks(
     samples: list[float],
     source_timestamp: datetime,
     total_chunks: int = 8,
+    *,
+    dataset: str = "unknown",
 ) -> list[RawVibrationWindow]:
     """
     Ham sinyali (örn. 20.480 örnek) alıp belirtilen sayıda (varsayılan 8) chunk'a böler.
@@ -49,6 +51,7 @@ def create_chunks(
             total_chunks=total_chunks,
             machine_id=machine_id,
             axis=axis,
+            dataset=dataset,
             samples=chunk_samples,
             occurred_at=occurred_at,
             source_timestamp=source_timestamp,

@@ -113,6 +113,16 @@ def test_ml_series_are_independent_per_machine() -> None:
 
 
 @pytest.mark.unit
+def test_ml_series_are_independent_per_dataset() -> None:
+    detector = IsolationForestDetector(baseline_window=8, random_state=0)
+    for index in range(8):
+        detector.observe("bearing_1", "x", _healthy(index), dataset="set2")
+
+    other = detector.observe("bearing_1", "x", _features(8.0, 25.0, 20.0, 12.0), dataset="set1")
+    assert other.status is DetectionStatus.WARMING_UP
+
+
+@pytest.mark.unit
 def test_invalid_ml_window_is_rejected() -> None:
     with pytest.raises(ValueError, match="baseline"):
         IsolationForestDetector(baseline_window=1)

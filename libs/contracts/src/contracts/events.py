@@ -12,7 +12,10 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 ScoreKind = Literal["zscore", "if_score", "extent", "pca_t2", "pca_spe", "river"]
-ANOMALY_SCHEMA_VERSION = 2
+UNKNOWN_DATASET = "unknown"
+RAW_WINDOW_SCHEMA_VERSION = 2
+FEATURES_SCHEMA_VERSION = 2
+ANOMALY_SCHEMA_VERSION = 3
 
 
 class RawVibrationWindow(BaseModel):
@@ -26,7 +29,8 @@ class RawVibrationWindow(BaseModel):
     samples: list[float]
     occurred_at: datetime  # yayin ani (canli zaman ekseni)
     source_timestamp: datetime  # orijinal dosya zaman damgasi
-    schema_version: int = 1
+    dataset: str = UNKNOWN_DATASET
+    schema_version: int = RAW_WINDOW_SCHEMA_VERSION
 
 
 class VibrationFeatures(BaseModel):
@@ -43,19 +47,22 @@ class VibrationFeatures(BaseModel):
     is_complete: bool
     chunks_received: int
     fft_band_energy: dict[str, float] = Field(default_factory=dict)
-    schema_version: int = 1
+    dataset: str = UNKNOWN_DATASET
+    schema_version: int = FEATURES_SCHEMA_VERSION
 
 
 class AnomalyDetected(BaseModel):
     """Tespit edilen bir anomali olayi.
 
     ADR-0009: `z_score` yalniz Katman 1. Katman 2 `anomaly_score` + `score_kind`.
+    ADR-0014: `dataset` Set 1/Set 2 serilerini ayirir.
     """
 
     event_id: UUID
     occurred_at: datetime
     machine_id: str
     axis: str | None = None
+    dataset: str = UNKNOWN_DATASET
     metric: str  # ornek: "kurtosis", "rms", "feature_vector"
     value: float
     z_score: float | None = None

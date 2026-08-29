@@ -150,10 +150,17 @@ class IsolationForestDetector:
         self._warning_quantile = warning_quantile
         self._critical_quantile = critical_quantile
         self._use_extent = use_extent
-        self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
+        self._tracks: dict[tuple[str, str, str], _WarmupTrack] = {}
 
-    def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
-        track = self._tracks.setdefault((machine_id, axis), _WarmupTrack())
+    def observe(
+        self,
+        machine_id: str,
+        axis: str,
+        features: SignalFeatures,
+        *,
+        dataset: str = "unknown",
+    ) -> DetectionResult:
+        track = self._tracks.setdefault((dataset, machine_id, axis), _WarmupTrack())
         vector = feature_vector(features)
         if not track.frozen:
             track.vectors.append(vector)
@@ -251,10 +258,17 @@ class PcaDetector:
         self._n_components = n_components
         self._warning_quantile = warning_quantile
         self._critical_quantile = critical_quantile
-        self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
+        self._tracks: dict[tuple[str, str, str], _WarmupTrack] = {}
 
-    def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
-        track = self._tracks.setdefault((machine_id, axis), _WarmupTrack())
+    def observe(
+        self,
+        machine_id: str,
+        axis: str,
+        features: SignalFeatures,
+        *,
+        dataset: str = "unknown",
+    ) -> DetectionResult:
+        track = self._tracks.setdefault((dataset, machine_id, axis), _WarmupTrack())
         vector = feature_vector(features)
         if not track.frozen:
             track.vectors.append(vector)
@@ -350,12 +364,19 @@ class RiverHalfSpaceTreesDetector:
         self._seed = seed
         self._warning_quantile = warning_quantile
         self._critical_quantile = critical_quantile
-        self._tracks: dict[tuple[str, str], _WarmupTrack] = {}
+        self._tracks: dict[tuple[str, str, str], _WarmupTrack] = {}
 
-    def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
+    def observe(
+        self,
+        machine_id: str,
+        axis: str,
+        features: SignalFeatures,
+        *,
+        dataset: str = "unknown",
+    ) -> DetectionResult:
         from river.anomaly import HalfSpaceTrees
 
-        track = self._tracks.setdefault((machine_id, axis), _WarmupTrack())
+        track = self._tracks.setdefault((dataset, machine_id, axis), _WarmupTrack())
         vector = feature_vector(features)
         point = _as_point(vector)
         if not track.frozen:

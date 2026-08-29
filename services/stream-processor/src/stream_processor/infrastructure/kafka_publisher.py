@@ -38,6 +38,7 @@ class KafkaDownstreamPublisher:
             "snapshot_id": str(assembly.snapshot_id),
             "machine_id": assembly.machine_id,
             "axis": assembly.axis,
+            "dataset": assembly.dataset,
             "chunks_received": assembly.chunks_received,
             "total_chunks": assembly.total_chunks,
         }

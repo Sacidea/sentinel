@@ -136,7 +136,8 @@ def test_spike_after_baseline_emits_anomaly() -> None:
     assert spiked.anomaly.score_kind == "zscore"
     assert spiked.anomaly.z_score is not None
     assert spiked.anomaly.anomaly_score is None
-    assert spiked.anomaly.schema_version == 2
+    assert spiked.anomaly.schema_version == 3
+    assert spiked.anomaly.dataset == "unknown"
 
 
 @pytest.mark.unit
@@ -144,7 +145,9 @@ def test_extra_detector_emits_parallel_anomaly() -> None:
     from stream_processor.domain.detectors import DetectionResult, DetectionStatus
 
     class _AlwaysWarn:
-        def observe(self, machine_id: str, axis: str, features: object) -> DetectionResult:
+        def observe(
+            self, machine_id: str, axis: str, features: object, *, dataset: str = "unknown"
+        ) -> DetectionResult:
             return DetectionResult(
                 status=DetectionStatus.WARNING,
                 scores=(),

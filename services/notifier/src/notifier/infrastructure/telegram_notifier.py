@@ -17,7 +17,7 @@ def format_alert_text(event: AnomalyDetected) -> str:
         score_part = f"{kind}=n/a"
     return (
         f"Sentinel {event.severity.upper()} {event.detector}\n"
-        f"{event.machine_id} {event.metric}={event.value:.4f} {score_part}"
+        f"{event.dataset}/{event.machine_id} {event.metric}={event.value:.4f} {score_part}"
     )
 
 

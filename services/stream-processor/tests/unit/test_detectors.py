@@ -198,6 +198,23 @@ def test_series_are_independent_per_machine_and_axis() -> None:
 
 
 @pytest.mark.unit
+def test_series_are_independent_per_dataset() -> None:
+    detector = _detector()
+    _warmup(detector, machine_id="bearing_1", axis="x")
+
+    other = detector.observe("bearing_1", "x", _features(4.0, 1.0), dataset="set1")
+    ready = detector.observe("bearing_1", "x", _features(4.0, 1.0), dataset="unknown")
+
+    assert other.status is DetectionStatus.WARMING_UP
+    assert ready.status is DetectionStatus.WARNING
+    frozen = [
+        row for row in detector.drain_frozen() if row.machine_id == "bearing_1" and row.axis == "x"
+    ]
+    assert frozen
+    assert all(row.dataset == "unknown" for row in frozen)
+
+
+@pytest.mark.unit
 def test_crest_and_peak_are_not_scored() -> None:
     detector = _detector()
     _warmup(detector)
@@ -246,6 +263,7 @@ def test_freeze_emits_baseline_snapshots_once() -> None:
     rms = next(row for row in frozen if row.metric == "rms")
     assert rms.mean == pytest.approx(1.0)
     assert rms.std == pytest.approx(1.0)
+    assert rms.dataset == "unknown"
     assert detector.drain_frozen() == ()
 
 

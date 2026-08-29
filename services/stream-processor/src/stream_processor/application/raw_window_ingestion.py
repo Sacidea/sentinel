@@ -122,10 +122,12 @@ class RawWindowIngestion:
                         severity=event.severity,
                         at=event.occurred_at,
                         detector=event.detector,
+                        dataset=event.dataset,
                     ):
                         await self._anomaly_publisher.publish_anomaly(event)
                         logger.warning(
                             "Anomali tespit edildi.",
+                            dataset=event.dataset,
                             machine_id=event.machine_id,
                             metric=event.metric,
                             severity=event.severity,

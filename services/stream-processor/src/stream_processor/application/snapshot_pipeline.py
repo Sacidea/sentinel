@@ -55,6 +55,7 @@ def process_closed_snapshot(
         snapshot_id=assembly.snapshot_id,
         machine_id=assembly.machine_id,
         axis=assembly.axis,
+        dataset=assembly.dataset,
         occurred_at=assembly.occurred_at,
         rms=extracted.rms,
         kurtosis=extracted.kurtosis,
@@ -64,9 +65,13 @@ def process_closed_snapshot(
         chunks_received=assembly.chunks_received,
         fft_band_energy=dict(extracted.fft_band_energy),
     )
-    detections = [detector.observe(assembly.machine_id, assembly.axis, extracted)]
+    detections = [
+        detector.observe(assembly.machine_id, assembly.axis, extracted, dataset=assembly.dataset)
+    ]
     for extra in extra_detectors:
-        detections.append(extra.observe(assembly.machine_id, assembly.axis, extracted))
+        detections.append(
+            extra.observe(assembly.machine_id, assembly.axis, extracted, dataset=assembly.dataset)
+        )
     anomalies = tuple(
         _to_anomaly(
             detection,
@@ -114,6 +119,7 @@ def _to_anomaly(
         occurred_at=features.occurred_at,
         machine_id=features.machine_id,
         axis=features.axis,
+        dataset=features.dataset,
         metric=metric,
         value=value,
         z_score=z_score,

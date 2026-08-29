@@ -79,7 +79,9 @@ class WarnForest:
     def __init__(self) -> None:
         self._seen = 0
 
-    def observe(self, machine_id: str, axis: str, features: object) -> DetectionResult:
+    def observe(
+        self, machine_id: str, axis: str, features: object, *, dataset: str = "unknown"
+    ) -> DetectionResult:
         self._seen += 1
         if self._seen <= 2:
             return DetectionResult(

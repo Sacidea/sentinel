@@ -77,6 +77,7 @@ def test_alert_text_uses_z_score_for_layer1() -> None:
     text = format_alert_text(_event())
     assert "z_score=6.00" in text
     assert "if_score" not in text
+    assert "unknown/bearing_1" in text
 
 
 @pytest.mark.unit

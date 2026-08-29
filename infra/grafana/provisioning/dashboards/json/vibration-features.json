@@ -4,14 +4,29 @@
   "tags": ["sentinel", "walking-skeleton"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": {
     "from": "now-15m",
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "dataset",
+        "label": "Dataset",
+        "type": "custom",
+        "query": "set1,set2,unknown",
+        "current": { "selected": true, "text": "set1", "value": "set1" },
+        "options": [
+          { "selected": true, "text": "set1", "value": "set1" },
+          { "selected": false, "text": "set2", "value": "set2" },
+          { "selected": false, "text": "unknown", "value": "unknown" }
+        ],
+        "includeAll": false,
+        "multi": false
+      }
+    ]
   },
   "annotations": {
     "list": []
@@ -44,7 +59,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time AS \"time\", rms AS value, machine_id AS metric FROM vibration_features WHERE $__timeFilter(time) ORDER BY 1"
+          "rawSql": "SELECT time AS \"time\", rms AS value, machine_id AS metric FROM vibration_features WHERE dataset = '$dataset' AND $__timeFilter(time) ORDER BY 1"
         }
       ]
     },
@@ -75,7 +90,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time AS \"time\", kurtosis AS value, machine_id AS metric FROM vibration_features WHERE $__timeFilter(time) ORDER BY 1"
+          "rawSql": "SELECT time AS \"time\", kurtosis AS value, machine_id AS metric FROM vibration_features WHERE dataset = '$dataset' AND $__timeFilter(time) ORDER BY 1"
         }
       ]
     },
@@ -96,7 +111,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT time, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, fft_band_energy, is_complete, chunks_received FROM vibration_features WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 200"
+          "rawSql": "SELECT time, dataset, machine_id, axis, snapshot_id, rms, kurtosis, crest_factor, peak, fft_band_energy, is_complete, chunks_received FROM vibration_features WHERE dataset = '$dataset' AND $__timeFilter(time) ORDER BY time DESC LIMIT 200"
         }
       ]
     },
@@ -127,7 +142,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT occurred_at AS \"time\", COALESCE(anomaly_score, z_score) AS value, machine_id || '/' || detector || '/' || COALESCE(score_kind, 'legacy') AS metric FROM anomaly_events WHERE $__timeFilter(occurred_at) ORDER BY 1"
+          "rawSql": "SELECT occurred_at AS \"time\", COALESCE(anomaly_score, z_score) AS value, machine_id || '/' || detector || '/' || COALESCE(score_kind, 'legacy') AS metric FROM anomaly_events WHERE dataset = '$dataset' AND $__timeFilter(occurred_at) ORDER BY 1"
         }
       ]
     },
@@ -148,7 +163,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT occurred_at, machine_id, detector, score_kind, z_score, anomaly_score, severity, metric FROM anomaly_events WHERE $__timeFilter(occurred_at) ORDER BY occurred_at DESC LIMIT 200"
+          "rawSql": "SELECT occurred_at, dataset, machine_id, detector, score_kind, z_score, anomaly_score, severity, metric FROM anomaly_events WHERE dataset = '$dataset' AND $__timeFilter(occurred_at) ORDER BY occurred_at DESC LIMIT 200"
         }
       ]
     },
@@ -179,7 +194,7 @@
           "datasource": { "type": "postgres", "uid": "sentinel-timescaledb" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time AS \"time\", (fft_band_energy->>'bpfo')::double precision AS value, machine_id AS metric FROM vibration_features WHERE fft_band_energy IS NOT NULL AND $__timeFilter(time) ORDER BY 1"
+          "rawSql": "SELECT time AS \"time\", (fft_band_energy->>'bpfo')::double precision AS value, machine_id AS metric FROM vibration_features WHERE dataset = '$dataset' AND fft_band_energy IS NOT NULL AND $__timeFilter(time) ORDER BY 1"
         }
       ]
     }

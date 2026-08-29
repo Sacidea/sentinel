@@ -2,7 +2,13 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from contracts.events import ANOMALY_SCHEMA_VERSION, AnomalyDetected
+from contracts.events import (
+    ANOMALY_SCHEMA_VERSION,
+    UNKNOWN_DATASET,
+    AnomalyDetected,
+    RawVibrationWindow,
+    VibrationFeatures,
+)
 
 
 def _base(**overrides: object) -> dict[str, object]:
@@ -24,9 +30,10 @@ def _base(**overrides: object) -> dict[str, object]:
 
 
 @pytest.mark.unit
-def test_layer1_keeps_z_score_and_schema_v2() -> None:
+def test_layer1_keeps_z_score_and_current_schema() -> None:
     event = AnomalyDetected.model_validate(_base())
     assert event.schema_version == ANOMALY_SCHEMA_VERSION
+    assert event.dataset == UNKNOWN_DATASET
     assert event.z_score == pytest.approx(6.0)
     assert event.anomaly_score is None
     assert event.score_kind == "zscore"
@@ -122,3 +129,64 @@ def test_v1_isolation_forest_keeps_score_in_z_score_field() -> None:
     assert event.anomaly_score is None
     assert event.score_kind == "if_score"
     assert event.reported_score() == pytest.approx(0.014)
+    assert event.dataset == UNKNOWN_DATASET
+
+
+@pytest.mark.unit
+def test_missing_dataset_defaults_to_unknown() -> None:
+    """Eski Kafka govdesinde dataset yok; parse kirilmaz."""
+    raw = {
+        "snapshot_id": str(uuid4()),
+        "chunk_index": 0,
+        "total_chunks": 8,
+        "machine_id": "bearing_1",
+        "axis": "x",
+        "samples": [0.1],
+        "occurred_at": "2004-02-12T10:32:39Z",
+        "source_timestamp": "2004-02-12T10:32:39Z",
+        "schema_version": 1,
+    }
+    window = RawVibrationWindow.model_validate(raw)
+    assert window.dataset == UNKNOWN_DATASET
+
+    features = VibrationFeatures.model_validate(
+        {
+            "snapshot_id": str(uuid4()),
+            "machine_id": "bearing_1",
+            "axis": "x",
+            "occurred_at": "2004-02-12T10:32:39Z",
+            "rms": 0.1,
+            "kurtosis": 3.0,
+            "crest_factor": 3.0,
+            "peak": 0.2,
+            "is_complete": True,
+            "chunks_received": 8,
+            "schema_version": 1,
+        }
+    )
+    assert features.dataset == UNKNOWN_DATASET
+
+    payload = _base()
+    del payload["score_kind"]
+    payload["schema_version"] = 1
+    event = AnomalyDetected.model_validate(payload)
+    assert event.dataset == UNKNOWN_DATASET
+
+
+@pytest.mark.unit
+def test_dataset_roundtrip_on_raw_window() -> None:
+    window = RawVibrationWindow.model_validate(
+        {
+            "snapshot_id": str(uuid4()),
+            "chunk_index": 0,
+            "total_chunks": 1,
+            "machine_id": "bearing_1",
+            "axis": "y",
+            "samples": [0.2],
+            "occurred_at": "2004-02-12T10:32:39Z",
+            "source_timestamp": "2004-02-12T10:32:39Z",
+            "dataset": "set1",
+        }
+    )
+    assert window.dataset == "set1"
+    assert window.schema_version == 2

@@ -65,6 +65,28 @@ def test_different_severity_or_axis_is_independent() -> None:
 
 
 @pytest.mark.unit
+def test_different_dataset_is_independent() -> None:
+    debounce = AlarmDebounce(cooldown_sec=60.0)
+    debounce.should_notify(
+        machine_id="bearing_1",
+        axis="x",
+        metric="rms",
+        severity="critical",
+        at=T0,
+        dataset="set2",
+    )
+
+    assert debounce.should_notify(
+        machine_id="bearing_1",
+        axis="x",
+        metric="rms",
+        severity="critical",
+        at=T0,
+        dataset="set1",
+    )
+
+
+@pytest.mark.unit
 def test_different_detector_is_independent() -> None:
     debounce = AlarmDebounce(cooldown_sec=60.0)
     debounce.should_notify(

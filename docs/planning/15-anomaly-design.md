@@ -12,7 +12,7 @@ Bu sıralama bilinçli: önce açıklanabilir taban, sonra ML zenginleştirmesi.
 ## Baseline (Normal Davranış Referansı)
 
 **Strateji: Sabit başlangıç penceresi.**
-- IMS testleri sağlıklı durumda başlar. Her `(machine_id, axis, metric)` için **ilk N snapshot** (varsayılan N=200, `.env`'de `BASELINE_WINDOW`) "normal" kabul edilir.
+- IMS testleri sağlıklı durumda başlar. Her `(dataset, machine_id, axis, metric)` için **ilk N snapshot** (varsayılan N=200, `.env`'de `BASELINE_WINDOW`) "normal" kabul edilir.
 - Bu pencereden `mean` ve `std` hesaplanır ve `machine_baseline` tablosuna yazılıp **sabitlenir** (bir daha güncellenmez).
 - Sonraki tüm snapshot'lar bu sabit baseline'a göre skorlanır.
 
@@ -77,7 +77,7 @@ Tek bir snapshot'ın Z-Score'u gürültülü olabilir (anlık sıçrama). Yanlı
 ## Alarm Gürültü Kontrolü (Debounce)
 
 Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam).
-- Aynı `(machine_id, axis, metric, severity)` için son bildirimden bu yana `ALARM_COOLDOWN` (varsayılan 60 sn playback zamanı) geçmeden yeni bildirim gönderilmez. Eksen seri kimliğinin parçasıdır; x ve y birbirini susturmaz.
+- Aynı `(dataset, machine_id, axis, metric, severity)` için son bildirimden bu yana `ALARM_COOLDOWN` (varsayılan 60 sn playback zamanı) geçmeden yeni bildirim gönderilmez. Eksen ve dataset seri kimliğinin parçasıdır; x/y ve set1/set2 birbirini susturmaz.
 - Kayıt (`anomaly_events`) yine de her tespitte yazılır; sadece *bildirim* debounce edilir. (Kayıt ≠ bildirim ayrımı.)
 
 ## Değerlendirme (05 ile bağlantılı)
@@ -100,7 +100,7 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
   kayda gider, bildirime çıkmaz (ADR-0008).
 - **Skor alanları (ADR-0009):** Z-Score `z_score` + `score_kind='zscore'`. IF
   `anomaly_score` + `if_score` veya `extent` (hangisi kazandıysa); `z_score` NULL.
-  PCA `pca_t2`/`pca_spe`, River `river`. Event `schema_version=2`.
+  PCA `pca_t2`/`pca_spe`, River `river`. Event `schema_version=3` (`dataset`, ADR-0014).
 - Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları kayda gider, tespite girmez (ADR-0010). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`.
 
 ## Yeni Config Değişkenleri

@@ -71,7 +71,11 @@ cp .env.example .env
 # 2. Altyapıyı ayağa kaldır (Kafka, TimescaleDB, Redis, Grafana)
 docker compose up -d --build
 
-# 3. NASA IMS Set 2 verisini data/ims/2nd_test altına yerleştir
+# 3. NASA IMS verisini `data/` altına yerleştir
+#    Set 2 (tek eksen): data/ims veya data/ims/2nd_test
+#      → DATASET_PATH=/data/ims  DATASET_NAME=set2
+#    Set 1 (çift eksen): data/ims_set1/1st_test
+#      → DATASET_PATH=/data/ims_set1/1st_test  DATASET_NAME=set1
 #    (indirme: https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip)
 
 # 4. Testler

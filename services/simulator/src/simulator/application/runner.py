@@ -21,11 +21,13 @@ class SimulatorRunner:
         publisher: MessagePublisher,
         playback_interval_sec: float = 1.0,
         topic: str = "sensor.vibration.raw",
+        dataset_name: str = "unknown",
     ):
         self.dataset = dataset
         self.publisher = publisher
         self.playback_interval_sec = playback_interval_sec
         self.topic = topic
+        self.dataset_name = dataset_name
 
     async def run(self) -> None:
         logger.info("Simülatör başlatılıyor...")
@@ -43,6 +45,7 @@ class SimulatorRunner:
                         axis=axis,
                         samples=samples,
                         source_timestamp=timestamp,
+                        dataset=self.dataset_name,
                     )
 
                     # Publish

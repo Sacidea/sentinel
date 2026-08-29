@@ -22,6 +22,7 @@ def _chunk(
     machine_id: str = "bearing_1",
     axis: Literal["x", "y"] = "x",
     samples: list[float] | None = None,
+    dataset: str = "unknown",
 ) -> RawVibrationWindow:
     return RawVibrationWindow(
         snapshot_id=snapshot_id,
@@ -29,6 +30,7 @@ def _chunk(
         total_chunks=total_chunks,
         machine_id=machine_id,
         axis=axis,
+        dataset=dataset,
         samples=[float(index)] if samples is None else samples,
         occurred_at=MOMENT,
         source_timestamp=MOMENT,
@@ -147,6 +149,31 @@ def test_chunk_from_another_machine_is_rejected() -> None:
     outcome = assembly.add(_chunk(1, snapshot_id=snapshot_id, machine_id="bearing_2"))
 
     assert outcome is ChunkOutcome.INCONSISTENT
+    assert assembly.chunks_received == 1
+
+
+@pytest.mark.unit
+def test_same_snapshot_id_different_axis_is_rejected() -> None:
+    """bearing_3/x ile bearing_3/y aynı snapshot_id taşıyamaz; tampon id ile anahtarlanır."""
+    snapshot_id = uuid4()
+    assembly = SnapshotAssembly(_chunk(0, snapshot_id=snapshot_id, axis="x"))
+
+    outcome = assembly.add(_chunk(1, snapshot_id=snapshot_id, axis="y"))
+
+    assert outcome is ChunkOutcome.INCONSISTENT
+    assert assembly.axis == "x"
+    assert assembly.chunks_received == 1
+
+
+@pytest.mark.unit
+def test_same_snapshot_id_different_dataset_is_rejected() -> None:
+    snapshot_id = uuid4()
+    assembly = SnapshotAssembly(_chunk(0, snapshot_id=snapshot_id, dataset="set1"))
+
+    outcome = assembly.add(_chunk(1, snapshot_id=snapshot_id, dataset="set2"))
+
+    assert outcome is ChunkOutcome.INCONSISTENT
+    assert assembly.dataset == "set1"
     assert assembly.chunks_received == 1
 
 

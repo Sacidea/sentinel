@@ -69,13 +69,14 @@ class DetectionResult:
 
 @dataclass(frozen=True)
 class BaselineSnapshot:
-    """Donmuş bir `(machine_id, axis, metric)` baseline'ı; uygulama kalıcı yazar."""
+    """Donmuş bir `(dataset, machine_id, axis, metric)` baseline'ı; uygulama kalıcı yazar."""
 
     machine_id: str
     axis: str
     metric: MetricName
     mean: float
     std: float
+    dataset: str = "unknown"
 
 
 @dataclass
@@ -89,7 +90,7 @@ class _MetricTrack:
 
 
 class ZScoreDetector:
-    """`(machine_id, axis)` başına sabit baseline ve hareketli ortalama tutar."""
+    """`(dataset, machine_id, axis)` başına sabit baseline ve hareketli ortalama tutar."""
 
     def __init__(
         self,
@@ -112,13 +113,20 @@ class ZScoreDetector:
         self._ma_window = ma_window
         self._warning_threshold = warning_threshold
         self._critical_threshold = critical_threshold
-        self._series: dict[tuple[str, str], dict[MetricName, _MetricTrack]] = {}
+        self._series: dict[tuple[str, str, str], dict[MetricName, _MetricTrack]] = {}
         self._pending_frozen: list[BaselineSnapshot] = []
 
-    def observe(self, machine_id: str, axis: str, features: SignalFeatures) -> DetectionResult:
+    def observe(
+        self,
+        machine_id: str,
+        axis: str,
+        features: SignalFeatures,
+        *,
+        dataset: str = "unknown",
+    ) -> DetectionResult:
         """Bir snapshot'ın özelliklerini baseline'a ekler veya skorlar."""
         values = _finite_metric_values(features)
-        tracks = self._series.setdefault((machine_id, axis), self._new_tracks())
+        tracks = self._series.setdefault((dataset, machine_id, axis), self._new_tracks())
         still_warming = not all(track.frozen for track in tracks.values())
 
         for metric, value in values.items():
@@ -127,7 +135,7 @@ class ZScoreDetector:
                 continue
             track.warmup.append(value)
             if len(track.warmup) >= self._baseline_window:
-                self._freeze_track(machine_id, axis, metric, track)
+                self._freeze_track(dataset, machine_id, axis, metric, track)
 
         if still_warming:
             return DetectionResult(status=DetectionStatus.WARMING_UP, scores=())
@@ -163,7 +171,9 @@ class ZScoreDetector:
 
     def seed_baseline(self, snapshot: BaselineSnapshot) -> None:
         """Kayıtlı baseline'ı yükler; warmup atlanır (restart'ta boiling frog olmasın)."""
-        tracks = self._series.setdefault((snapshot.machine_id, snapshot.axis), self._new_tracks())
+        tracks = self._series.setdefault(
+            (snapshot.dataset, snapshot.machine_id, snapshot.axis), self._new_tracks()
+        )
         track = tracks[snapshot.metric]
         track.mean = snapshot.mean
         track.std = snapshot.std
@@ -179,6 +189,7 @@ class ZScoreDetector:
 
     def _freeze_track(
         self,
+        dataset: str,
         machine_id: str,
         axis: str,
         metric: MetricName,
@@ -198,6 +209,7 @@ class ZScoreDetector:
                 metric=metric,
                 mean=mean,
                 std=std,
+                dataset=dataset,
             )
         )
 

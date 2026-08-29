@@ -26,6 +26,7 @@ async def main() -> None:
         publisher=publisher,
         playback_interval_sec=settings.PLAYBACK_INTERVAL_SEC,
         topic=settings.KAFKA_TOPIC,
+        dataset_name=settings.DATASET_NAME,
     )
 
     # Graceful shutdown için sinyal yakalama

@@ -17,6 +17,7 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `time` | `TIMESTAMPTZ NOT NULL` | Özelliğin ait olduğu an (event `occurred_at`) |
 | `machine_id` | `TEXT NOT NULL` | `bearing_1..4` |
 | `axis` | `TEXT NOT NULL` | `x` / `y` |
+| `dataset` | `TEXT NOT NULL` | `set1` / `set2`; eski satırlar `unknown` (ADR-0014) |
 | `snapshot_id` | `UUID NOT NULL` | İzlenebilirlik (chunk reassembly kaynağı) |
 | `rms` | `DOUBLE PRECISION` | Kök ortalama kare |
 | `kurtosis` | `DOUBLE PRECISION` | Basıklık (erken arıza göstergesi) |
@@ -34,6 +35,7 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 - Otomatik: `time DESC` (hypertable varsayılanı)
 - `CREATE INDEX ON vibration_features (machine_id, time DESC);`  — makine bazlı zaman sorguları
 - `CREATE INDEX ON vibration_features (machine_id, axis, time DESC);` — eksen ayrımı gerekiyorsa
+- `CREATE INDEX ON vibration_features (dataset, machine_id, axis, time DESC);` — set ayrımı (ADR-0014)
 
 ### 2. `anomaly_events` — anomali olayları
 `AnomalyDetected` event'inin kalıcı kaydı. Seyrek olay; hypertable şart değil ama tutarlılık için zamana göre indekslenir.
@@ -44,6 +46,7 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `occurred_at` | `TIMESTAMPTZ NOT NULL` | Anomali anı |
 | `machine_id` | `TEXT NOT NULL` | |
 | `axis` | `TEXT` | |
+| `dataset` | `TEXT NOT NULL` | `set1` / `set2`; eski satırlar `unknown` (ADR-0014) |
 | `metric` | `TEXT NOT NULL` | Hangi özellik tetikledi (örn. `kurtosis`) |
 | `value` | `DOUBLE PRECISION NOT NULL` | Özelliğin değeri |
 | `z_score` | `DOUBLE PRECISION` | Katman 1 sapması; Katman 2 NULL (ADR-0009, 002) |
@@ -63,11 +66,12 @@ Anomali tespiti için "normal"in ne olduğunu tutar (detaylı mantık 15-anomaly
 |---|---|---|
 | `machine_id` | `TEXT` | |
 | `axis` | `TEXT` | |
+| `dataset` | `TEXT` | `set1` / `set2`; eski satırlar `unknown` |
 | `metric` | `TEXT` | Örn. `rms`, `kurtosis` |
 | `mean` | `DOUBLE PRECISION` | Baseline ortalama |
 | `std` | `DOUBLE PRECISION` | Baseline standart sapma (Z-Score paydası) |
 | `updated_at` | `TIMESTAMPTZ` | En son ne zaman güncellendi |
-| PK | `(machine_id, axis, metric)` | Her kombinasyon için tek satır |
+| PK | `(dataset, machine_id, axis, metric)` | Her set×rulman×eksen×metrik için tek satır |
 
 ## Continuous Aggregate (Materialized, otomatik yenilenen)
 

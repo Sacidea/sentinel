@@ -22,7 +22,7 @@ Bu sıralama bilinçli: önce açıklanabilir taban, sonra ML zenginleştirmesi.
 
 - **Arıza çapanı (NASA, göz kararı değil):** Set 2 README: *“At the end of the test-to-failure experiment, outer race failure occurred in bearing 1.”* Incipient timestamp yok. Lead time son dosyaya göredir (index 983, `2004.02.19.06.22.39`; 10 dk aralık). RMS ~index 700 nitel gözlemdir; hesaba girmez. Ayrıntı: `ml/notebooks/ims_set2_spike.md`.
 - **Sonuç:** `BASELINE_WINDOW=200` kirlenmiyor. 3.0/5.0 etiketlenmemiş `bearing_2`'de 13 erken alarm (index 351). **5.0/8.0** ile etiketsiz FP=0; bearing_1 lead **74.5 saat** (index 536→983). Tarama: `ml/notebooks/ims_set2_zscore_calibration.md`.
-- **Sınır:** Eşikler yalnız Set 2'ye kalibre edildi. Set 1/3 veya başka dağılımda yeniden ölçülmeden kullanılmaz (overfitting).
+- **Sınır:** Eşikler yalnız Set 2'ye kalibre edildi. Set 1 hold-out (`ml/notebooks/ims_set1_zscore.md`) aynı 5.0/8.0'ı kilit tutar; retune yok. Set 3 veya başka dağılımda yeniden ölçülmeden kullanılmaz (overfitting).
 
 **Soğuk başlangıç (cold start):** Baseline dolana kadar (ilk N snapshot) anomali skoru üretilmez; bu snapshot'lar yalnız baseline'ı beslemek için kullanılır. Event'lerde bu dönem `warming_up` olarak işaretlenebilir.
 

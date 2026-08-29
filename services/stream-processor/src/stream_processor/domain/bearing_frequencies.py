@@ -16,6 +16,11 @@ SAMPLE_RATE_HZ: Final[float] = 20480.0
 BAND_HALF_WIDTH_HZ: Final[float] = 5.0
 HARMONICS: Final[tuple[int, ...]] = (1, 2, 3)
 
+# Envelope: darbe trenini rezonans bandinda demodule et (ADR-0012/0013).
+# Nyquist 10.240 Hz; ust kenar onun altinda kalir.
+ENVELOPE_BANDPASS_LO_HZ: Final[float] = 2000.0
+ENVELOPE_BANDPASS_HI_HZ: Final[float] = 10000.0
+
 # Rexnord ZA-2115 (IMS Set 2): dis bilezik / ic bilezik / bilye gecis.
 CHARACTERISTIC_HZ: Final[dict[str, float]] = {
     "bpfo": 236.0,

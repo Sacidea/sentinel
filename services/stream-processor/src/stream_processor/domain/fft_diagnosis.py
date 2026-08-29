@@ -1,10 +1,13 @@
-"""FFT bant teshisi — saf kural, I/O yok. Canli anomaly_events yazmaz (ADR-0011).
+"""FFT bant teshisi — saf kural, I/O yok. Canli yazmaz (ADR-0011 otopsi, ADR-0012).
+
+Ham-rFFT denendi; kaplin/Set 1 siniri goruldu; teshis envelope'a birakildi.
+Kod silinmez. snapshot_pipeline cagirmaz.
 
 Iki kosul AND (Set 2 kalibrasyonu):
 (a) Mutlak yukselis: aday bandin z'si kendi baseline'ina gore esigi asar.
 (b) Spektral hakimiyet: aday enerji olarak diger iki karakteristigi basar
     VE en az bir diger bant da baseline'ini asar. Yalniz (b)'nin enerji orani
-    kaplin tuzağını elemez — etiketsiz kanallarda BPFO kovasi tek basina sisar,
+    kaplin tuzagini elemez — etiketsiz kanallarda BPFO kovasi tek basina sisar,
     BPFI/BSF yerinde kalir; 'baskın' gorunur. Esik taramasi: ims_set2_fft_diagnosis.md.
 """
 

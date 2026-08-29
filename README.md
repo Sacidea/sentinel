@@ -98,7 +98,8 @@ Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
 - **FFT bant enerjisi** hesaplanır (`bpfo`/`bpfi`/`bsf`, ZA-2115 merkezleri) ve
   `fft_band_energy` JSONB'ye yazılır. **Teşhis/alarm yok** — Z-Score/IF vektörüne
-  girmez (ADR-0010). Set 2 BPFO taraması: `ml/notebooks/ims_set2_fft_bands.md`.
+  girmez (ADR-0010). Ham-rFFT ve envelope teşhis denendi: ikisi de Set 2'de 4/4,
+  Set 1 hold-out tutmadı. Canlı `fault_type` yok (ADR-0011–0013).
 - **Eşikler Set 2'ye kalibre.** Başka test setine (Set 1/3) geçilirse kalibrasyon scripti yeniden çalıştırılmalı.
 - **River** çevrimiçi öğrenme detektörü kayda geçiyor ancak sistematik olarak taranmadı/kalibre edilmedi.
 

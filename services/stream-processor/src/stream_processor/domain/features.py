@@ -7,6 +7,7 @@ için ~3. Rulman izlemede eşikler bu ölçeğe göre yorumlandığı için exce
 kullanılmaz; 3 civarı sağlıklı, belirgin yükseliş darbeli bozulma işaretidir.
 
 FFT bant enerjisi teşhis etmez; Z-Score/IF/PCA/River girdisi değildir (ADR-0010).
+Envelope bantları burada yok: canlı boruya girmez (ADR-0012/0013).
 """
 
 from __future__ import annotations
@@ -15,14 +16,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
-from numpy.typing import NDArray
 
-from stream_processor.domain.bearing_frequencies import (
-    BAND_HALF_WIDTH_HZ,
-    CHARACTERISTIC_HZ,
-    HARMONICS,
-    SAMPLE_RATE_HZ,
-)
+from stream_processor.domain.bearing_frequencies import SAMPLE_RATE_HZ
+from stream_processor.domain.spectrum import rfft_band_energy
 
 
 @dataclass(frozen=True)
@@ -68,30 +64,5 @@ def extract_features(
         kurtosis=kurtosis,
         crest_factor=crest_factor,
         peak=peak,
-        fft_band_energy=_fft_band_energy(signal, sample_rate_hz=sample_rate_hz),
+        fft_band_energy=rfft_band_energy(signal, sample_rate_hz=sample_rate_hz),
     )
-
-
-def _fft_band_energy(signal: NDArray[np.float64], *, sample_rate_hz: float) -> dict[str, float]:
-    """rfft gucu: her karakteristik icin 1.+2.+3. harmonik, ±BAND_HALF_WIDTH_HZ."""
-    empty = dict.fromkeys(CHARACTERISTIC_HZ, 0.0)
-    if signal.size < 2 or sample_rate_hz <= 0.0:
-        return empty
-    spectrum = np.fft.rfft(signal)
-    freqs = np.fft.rfftfreq(signal.size, d=1.0 / sample_rate_hz)
-    power = np.abs(spectrum) ** 2
-    nyquist = sample_rate_hz / 2.0
-    bands: dict[str, float] = {}
-    for name, fundamental in CHARACTERISTIC_HZ.items():
-        total = 0.0
-        for harmonic in HARMONICS:
-            center = fundamental * float(harmonic)
-            if center > nyquist:
-                continue
-            lo = center - BAND_HALF_WIDTH_HZ
-            hi = center + BAND_HALF_WIDTH_HZ
-            mask = (freqs >= lo) & (freqs <= hi)
-            if np.any(mask):
-                total += float(np.sum(power[mask]))
-        bands[name] = total
-    return bands

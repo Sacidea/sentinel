@@ -90,7 +90,12 @@ def _baseline(store: dict[str, dict[str, np.ndarray]], bearing: str) -> FftBandB
 
 
 def diagnose_series(
-    store: dict[str, dict[str, np.ndarray]], bearing: str
+    store: dict[str, dict[str, np.ndarray]],
+    bearing: str,
+    *,
+    abs_z: float = DEFAULT_ABS_Z,
+    dominance: float = DEFAULT_DOMINANCE,
+    companion_z: float = DEFAULT_COMPANION_Z,
 ) -> tuple[list[str], FftBandBaseline]:
     baseline = _baseline(store, bearing)
     n_files = len(store["bpfo"][bearing])
@@ -100,7 +105,15 @@ def diagnose_series(
             labels.append("warming_up")
             continue
         energy = {band: float(store[band][bearing][index]) for band in BANDS}
-        labels.append(diagnose_fft_bands(energy, baseline))
+        labels.append(
+            diagnose_fft_bands(
+                energy,
+                baseline,
+                abs_z=abs_z,
+                dominance=dominance,
+                companion_z=companion_z,
+            )
+        )
     return labels, baseline
 
 
@@ -130,6 +143,137 @@ def count_energy_only_bpfo(
         if _energy_only_bpfo(energy, baseline):
             hits += 1
     return hits
+
+
+def protocol_score(
+    store: dict[str, dict[str, np.ndarray]],
+    *,
+    abs_z: float,
+    dominance: float,
+    companion_z: float,
+) -> tuple[bool, int, int]:
+    """4/4 protokol: b1 bpfo, digerleri belirsiz. Donen: ok, b1 #bpfo, etiketsiz #teshis."""
+    unlabeled_hits = 0
+    b1_hits = 0
+    labeled_ok = True
+    unlabeled_ok = True
+    for bearing in BEARINGS:
+        labels, _ = diagnose_series(
+            store, bearing, abs_z=abs_z, dominance=dominance, companion_z=companion_z
+        )
+        fault, _ = first_fault(labels)
+        n_fault = sum(1 for label in labels if label in BANDS)
+        if bearing == LABELED:
+            b1_hits = labels.count("bpfo")
+            if fault != "bpfo":
+                labeled_ok = False
+        else:
+            unlabeled_hits += n_fault
+            if fault != "uncertain":
+                unlabeled_ok = False
+    return labeled_ok and unlabeled_ok, b1_hits, unlabeled_hits
+
+
+def _peak_companion_rows(
+    store: dict[str, dict[str, np.ndarray]],
+) -> list[tuple[str, float, float, int]]:
+    rows: list[tuple[str, float, float, int]] = []
+    for bearing in BEARINGS:
+        baseline = _baseline(store, bearing)
+        n_files = len(store["bpfo"][bearing])
+        max_z_bpfo = float("-inf")
+        max_companion = float("-inf")
+        for index in range(BASELINE, n_files):
+            energy = {band: float(store[band][bearing][index]) for band in BANDS}
+            z_scores = band_z_scores(energy, baseline)
+            max_z_bpfo = max(max_z_bpfo, z_scores["bpfo"])
+            max_companion = max(max_companion, z_scores["bpfi"], z_scores["bsf"])
+        rows.append(
+            (
+                bearing,
+                max_z_bpfo,
+                max_companion,
+                count_energy_only_bpfo(store, bearing, baseline),
+            )
+        )
+    return rows
+
+
+def _sensitivity_tables(store: dict[str, dict[str, np.ndarray]]) -> list[str]:
+    peaks = _peak_companion_rows(store)
+    unlabeled_max_c = max(row[2] for row in peaks if row[0] != LABELED)
+    lines = [
+        "",
+        "## Esik hassasiyeti (Set 2, ayni veri — overfitting notu)",
+        "",
+        "Esikler bu sette aranip yine bu sette dogrulandi. Asagidaki 1D taramalar",
+        "hangi sayinin 4/4'u tasiydigini gosterir; hold-out (Set 1) degildir.",
+        "",
+        "| Rulman | max z_BPFO | max companion (z_BPFI,z_BSF) | energy-only n |",
+        "|---|---:|---:|---:|",
+    ]
+    for bearing, max_z_bpfo, max_companion, n_energy in peaks:
+        lines.append(
+            f"| {bearing} | {max_z_bpfo:.2f} | {max_companion:.2f} | {n_energy} |"
+        )
+    b2_c = next(row[2] for row in peaks if row[0] == "bearing_2")
+    lines.extend(
+        [
+            "",
+            f"bearing_2 max companion={b2_c:.2f}; etiketsizlerin ustu "
+            f"{unlabeled_max_c:.2f}. Tam kuralda b2/3/4'u eleyen abs_z degil "
+            "companion'dir (energy-only bu snapshot'lari BPFO sayardi).",
+            "",
+            "### abs_z (D=3, C=8) — genis plato",
+            "",
+            "| abs_z | 4/4 | b1 #teshis | etiketsiz #teshis |",
+            "|---:|---|---:|---:|",
+        ]
+    )
+    for abs_z in (0.0, 10.0, 12.0, 15.0, 20.0, 50.0, 100.0):
+        ok, b1_hits, unlabeled = protocol_score(
+            store, abs_z=abs_z, dominance=3.0, companion_z=8.0
+        )
+        lines.append(
+            f"| {abs_z:g} | {'ok' if ok else 'FAIL'} | {b1_hits} | {unlabeled} |"
+        )
+    lines.extend(
+        [
+            "",
+            "C=8 varken abs_z=0 bile etiketsizleri tutar. 12, oran-sismesi bekcisi;",
+            "Set 2 4/4'unun asil nedeni companion boslugudur.",
+            "",
+            "### companion_z (abs_z=12, D=3) — alt sinir dar",
+            "",
+            "| companion_z | 4/4 | b1 #teshis | etiketsiz #teshis |",
+            "|---:|---|---:|---:|",
+        ]
+    )
+    for companion in (5.0, 6.0, 7.0, 7.5, 8.0, 10.0, 15.0, 40.0):
+        ok, b1_hits, unlabeled = protocol_score(
+            store, abs_z=12.0, dominance=3.0, companion_z=companion
+        )
+        lines.append(
+            f"| {companion:g} | {'ok' if ok else 'FAIL'} | {b1_hits} | {unlabeled} |"
+        )
+    lines.extend(
+        [
+            "",
+            "C=7 → etiketsiz false BPFO; C=8 → 0. 8, b2'nin en yuksek companion'i",
+            f"({b2_c:.2f}) hemen ustune oturur — altta bicak agrisi, ustte plato.",
+            "",
+            "### Gerekce",
+            "",
+            "Yapi fiziksel: tek-kova kaplin vs birden fazla karakteristigin cikmasi.",
+            "Sayilar istatistiksel p-degeri degil. z>=8 Gaussian'da asiri kucuk",
+            "olurdu ama bant enerjisi iid normal degil; 8 = bu runda saglikli",
+            "kanallarin ustune cik. Hold-out Set 1 4/4 tutmadi",
+            "(`ims_set1_fft_diagnosis.md`); teshis envelope'a (ADR-0012).",
+            "Set 2'ye kalibre; baska sette yeniden ayar bu kurali kurtarmaz.",
+            "",
+        ]
+    )
+    return lines
 
 
 def write_outputs(store: dict[str, dict[str, np.ndarray]]) -> None:
@@ -170,6 +314,9 @@ def write_outputs(store: dict[str, dict[str, np.ndarray]]) -> None:
 
     lines = [
         "# IMS Set 2 FFT ariza teshisi (offline)",
+        "",
+        "> Ham-rFFT denendi. Kaplin/bearing_4 siniri bu karnede. Set 1 hold-out",
+        "> tutmadi. Canli yok; sonraki deneme envelope (ADR-0011, ADR-0012).",
         "",
         "Canli `anomaly_events` yok. Kural: `diagnose_fft_bands` (ADR-0011).",
         f"Esikler Set 2: abs_z={DEFAULT_ABS_Z:g}, dominance={DEFAULT_DOMINANCE:g},",
@@ -241,10 +388,15 @@ def write_outputs(store: dict[str, dict[str, np.ndarray]]) -> None:
             "## Grid notu",
             "",
             "Yalniz z_BPFO + enerji-D taramasi: b1'i yakalayan hicbir (Z, D) cifti",
-            "b2/3/4'u sifirlamadi (strict=0). Companion ile (abs_z=12, D=3,",
-            "companion_z=8) b1>0 ve etiketsiz=0.",
-            "",
-            "Yalniz Set 2. Canli entegrasyon (`fault_type`, schema, migration) sonraki is.",
+            "b2/3/4'u sifirlamadi. Companion ile (abs_z=12, D=3, companion_z=8)",
+            "b1>0 ve etiketsiz=0.",
+        ]
+    )
+    lines.extend(_sensitivity_tables(store))
+    lines.extend(
+        [
+            "Yalniz Set 2 kalibrasyon otopsi. Hold-out tutmadi; yol ADR-0012.",
+            "Canli entegrasyon (`fault_type`) bu kurala baglanmaz.",
             "",
         ]
     )

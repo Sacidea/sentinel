@@ -1,5 +1,8 @@
 # IMS Set 2 FFT ariza teshisi (offline)
 
+> Ham-rFFT denendi. Kaplin/bearing_4 siniri bu karnede. Set 1 hold-out
+> tutmadi. Canli yok; sonraki deneme envelope (ADR-0011, ADR-0012).
+
 Canli `anomaly_events` yok. Kural: `diagnose_fft_bands` (ADR-0011).
 Esikler Set 2: abs_z=12, dominance=3,
 companion_z=8. Grafik: `ims_set2_fft_diagnosis.png`.
@@ -52,7 +55,62 @@ Tam kuralda hic BPFO etiketi yok (n=0).
 ## Grid notu
 
 Yalniz z_BPFO + enerji-D taramasi: b1'i yakalayan hicbir (Z, D) cifti
-b2/3/4'u sifirlamadi (strict=0). Companion ile (abs_z=12, D=3,
-companion_z=8) b1>0 ve etiketsiz=0.
+b2/3/4'u sifirlamadi. Companion ile (abs_z=12, D=3, companion_z=8)
+b1>0 ve etiketsiz=0.
 
-Yalniz Set 2. Canli entegrasyon (`fault_type`, schema, migration) sonraki is.
+## Esik hassasiyeti (Set 2, ayni veri — overfitting notu)
+
+Esikler bu sette aranip yine bu sette dogrulandi. Asagidaki 1D taramalar
+hangi sayinin 4/4'u tasiydigini gosterir; hold-out (Set 1) degildir.
+
+| Rulman | max z_BPFO | max companion (z_BPFI,z_BSF) | energy-only n |
+|---|---:|---:|---:|
+| bearing_1 | 230.58 | 633.07 | 99 |
+| bearing_2 | 38.96 | 7.45 | 33 |
+| bearing_3 | 81.24 | 5.16 | 69 |
+| bearing_4 | 441.61 | 5.04 | 88 |
+
+bearing_2 max companion=7.45; etiketsizlerin ustu 7.45. Tam kuralda b2/3/4'u eleyen abs_z degil companion'dir (energy-only bu snapshot'lari BPFO sayardi).
+
+### abs_z (D=3, C=8) — genis plato
+
+| abs_z | 4/4 | b1 #teshis | etiketsiz #teshis |
+|---:|---|---:|---:|
+| 0 | ok | 19 | 0 |
+| 10 | ok | 19 | 0 |
+| 12 | ok | 19 | 0 |
+| 15 | ok | 19 | 0 |
+| 20 | ok | 19 | 0 |
+| 50 | ok | 18 | 0 |
+| 100 | ok | 12 | 0 |
+
+C=8 varken abs_z=0 bile etiketsizleri tutar. 12, oran-sismesi bekcisi;
+Set 2 4/4'unun asil nedeni companion boslugudur.
+
+### companion_z (abs_z=12, D=3) — alt sinir dar
+
+| companion_z | 4/4 | b1 #teshis | etiketsiz #teshis |
+|---:|---|---:|---:|
+| 5 | FAIL | 31 | 8 |
+| 6 | FAIL | 25 | 5 |
+| 7 | FAIL | 22 | 2 |
+| 7.5 | ok | 21 | 0 |
+| 8 | ok | 19 | 0 |
+| 10 | ok | 16 | 0 |
+| 15 | ok | 13 | 0 |
+| 40 | ok | 10 | 0 |
+
+C=7 → etiketsiz false BPFO; C=8 → 0. 8, b2'nin en yuksek companion'i
+(7.45) hemen ustune oturur — altta bicak agrisi, ustte plato.
+
+### Gerekce
+
+Yapi fiziksel: tek-kova kaplin vs birden fazla karakteristigin cikmasi.
+Sayilar istatistiksel p-degeri degil. z>=8 Gaussian'da asiri kucuk
+olurdu ama bant enerjisi iid normal degil; 8 = bu runda saglikli
+kanallarin ustune cik. Hold-out Set 1 4/4 tutmadi
+(`ims_set1_fft_diagnosis.md`); teshis envelope'a (ADR-0012).
+Set 2'ye kalibre; baska sette yeniden ayar bu kurali kurtarmaz.
+
+Yalniz Set 2 kalibrasyon otopsi. Hold-out tutmadi; yol ADR-0012.
+Canli entegrasyon (`fault_type`) bu kurala baglanmaz.

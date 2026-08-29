@@ -1,8 +1,9 @@
 # ADR-0011: FFT ariza teshisi offline; canli anomaly_events yok
 
-- **Durum:** Kabul edildi
+- **Durum:** Kabul edildi (otopsi; teshis yolu [ADR-0012](0012-raw-fft-diagnosis-closed-envelope-next.md))
 - **Tarih:** 2026-08-28
-- **İlgili:** ADR-0010 (bant enerjisi cikarimi), ADR-0007 (FFT ertelemesi)
+- **İlgili:** ADR-0010 (bant enerjisi cikarimi), ADR-0007 (FFT ertelemesi),
+  ADR-0012 (ham-rFFT kapanir, envelope)
 
 ## Baglam
 
@@ -35,9 +36,13 @@ Teshis zorlanmaz: hicbir bant ikisini de gecmezse `uncertain`. Canli entegrasyon
    enerji baskinligi **ve** en az bir diger karakteristigin z'si
    `companion_z` (gercek irk imzasinda BPFI de baseline'dan cikar; kaplin
    BPFI'yi yerinde birakir).
-4. **Dogrulama (yalniz Set 2):** b1 → `bpfo`; b2/3/4 → `uncertain` (b4 dahil,
-   kaplin+oran sismesine ragmen). Karnesi `ml/notebooks/ims_set2_fft_diagnosis.md`.
-5. **Canli yok.** `anomaly_events.fault_type`, event semasi, migration sonraki is.
+4. **Dogrulama (Set 2, kalibrasyon seti):** b1 → `bpfo`; b2/3/4 → `uncertain`.
+   Karnesi `ml/notebooks/ims_set2_fft_diagnosis.md`.
+5. **Hold-out (Set 1, esik kilit):** 4/4 tutmadi. NASA b3 ic bilezik / b4 makara
+   yakalanmadi; NASA saglikli b2 yanlis `bsf` aldi. Grid'de hicbir (C, abs_z)
+   4/4 yapmadi — esik kaydirmak kurtarmaz. Karne
+   `ml/notebooks/ims_set1_fft_diagnosis.md`.
+6. **Canli yok.** `anomaly_events.fault_type` bu kurala baglanmaz (ADR-0012).
 
 ## Alternatifler
 
@@ -47,11 +52,13 @@ Teshis zorlanmaz: hicbir bant ikisini de gecmezse `uncertain`. Canli entegrasyon
   BPFO. Elendi.
 - **Zorunlu teshis (en yuksek bant her zaman kazansin):** belirsizi yok eder;
   kaplini irk arizasi yazar. Elendi.
-- **Canli `fault_type` bu turda:** dogrulama bitmeden sema kilitlenir. Ertele.
+- **Canli `fault_type` bu turda:** dogrulama bitmeden sema kilitlenir. Ertele
+  (kapanis ADR-0012).
 
 ## Sonuclar
 
 (+) NASA dis bilezik (b1) ile kaplin (b4) Set 2'de ayrilir; teshis zorlanmaz.
-(−) `companion_z`, "kaplin tum bantlari kaldirir" sezgisinin Set 2'deki
-    duzeltmesidir; baska geometri/sette yeniden tarama gerekir.
-(−) Canli alarm/Grafana teshis paneli yok; kural henuz boruya bagli degil.
+(+) Deneme silinmedi: karneler ve bu ADR otopsi olarak durur.
+(−) Set 1 hold-out ayni kurali dogrulamaz; rFFT uc kova BPFI/BSF hakimiyeti
+    uretmez. Canli `fault_type` acilmaz — yol envelope (ADR-0012).
+(−) `companion_z`, Set 2 kaplin duzeltmesidir; baska sete tasinmaz.

@@ -101,7 +101,7 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
 - **Skor alanları (ADR-0009):** Z-Score `z_score` + `score_kind='zscore'`. IF
   `anomaly_score` + `if_score` veya `extent` (hangisi kazandıysa); `z_score` NULL.
   PCA `pca_t2`/`pca_spe`, River `river`. Event `schema_version=3` (`dataset`, ADR-0014).
-- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları kayda gider, tespite girmez (ADR-0010). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`.
+- Kapatma: `ML_LAYER_ENABLED=false`. Eşikler warmup eğitim skor niceliği (`ML_WARNING_QUANTILE=0.995`, `ML_CRITICAL_QUANTILE=0.999`; **yalnız Set 2 IF+zarf**, ADR-0008 — başka sette yeniden tarama). Isolation Forest ölçeklenmiş max-norm zarfı eğitim niceliğiyle (çarpan yok). FFT bantları kayda gider, tespite girmez (ADR-0010). Birim testler sentetik; Set 2 karnesi `ims_set2_ml_calibration.md`. Offline Set 2→Set 1 IF transferi (`ml/notebooks/ims_domain_invariant_if.md`): kanal-içi z-norm canlı IF'e taşınmadı.
 
 ## Yeni Config Değişkenleri
 ```

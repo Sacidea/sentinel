@@ -4,36 +4,38 @@ Gerçek zamanlı endüstriyel titreşim anomali tespiti ve kestirimci bakım sis
 
 Fabrika rulmanlarından gelen titreşim verisini canlı bir akış olarak işleyerek, makine arızalanmadan önce istatistiksel ve makine öğrenmesi tabanlı erken uyarı üretir. Anomaliler Telegram üzerinden bildirilir ve canlı bir Grafana panosunda görselleştirilir.
 
-> **Durum:** Çalışır durumda. Gerçek NASA IMS Set 2 verisiyle uçtan uca test edildi; dört detektörlü anomali tespiti canlı akışta çalışıyor.
+> **Durum:** Çalışır durumda. İki farklı NASA IMS veri setinde (Set 1 ve Set 2) uçtan uca test edildi; dört detektörlü anomali tespiti canlı akışta çalışıyor. Tespit katmanı, tek sette kalibre edilip diğer sette hold-out testiyle doğrulandı.
 
-## Sonuçlar (NASA IMS Set 2, gerçek veri)
+## Öne Çıkan Sonuç: Tespit Genelleşiyor (hold-out doğrulaması)
 
-Set 2'de arızalanan rulman **bearing_1** (dış bilezik arızası, NASA etiketli). Sistem bu rulmanı, arızadan **çok önce** ve düşük yanlış pozitif oranıyla yakaladı.
+Z-Score tabanlı tespit katmanı **yalnızca Set 2'de kalibre edildi** (eşikler 5.0/8.0), ardından **hiçbir yeniden kalibrasyon yapılmadan** Set 1'de test edildi. Sonuç: aynı eşiklerle üç farklı arıza tipini, sıfır yanlış pozitifle yakaladı.
 
-**Katman karşılaştırması (984 gerçek Set 2 dosyası):**
+| Arıza tipi | Veri seti | Bearing/eksen | Lead time (arıza öncesi) | Erken yanlış pozitif |
+|---|---|---|---:|---:|
+| Dış bilezik (BPFO) | Set 2 | bearing_1 | 74.5 saat | 0 |
+| İç bilezik (BPFI) | Set 1 | bearing_3 / x | **166.0 saat** | 0 |
+| İç bilezik (BPFI) | Set 1 | bearing_3 / y | 54.2 saat | 0 |
+| Bilye/makara (BSF) | Set 1 | bearing_4 / x | **119.2 saat** | 0 |
+| Bilye/makara (BSF) | Set 1 | bearing_4 / y | 114.7 saat | 0 |
 
-| Detektör | bearing_1 ilk alarm | Lead time (arıza öncesi) | Yanlış pozitif |
-|---|---:|---|---:|
-| Z-Score (5.0/8.0) | index 536 | 74.5 saat | 0 |
-| **Isolation Forest (seçilen)** | **index 447** | **89.3 saat** | **0** |
-| PCA (Hotelling's T²) | index 398 | 97.5 saat | 3 |
+Lead time, ilk `critical` uyarının arıza sonuna göre kaç saat önce geldiğini gösterir (dosya index ekseni, dosyalar 10 dakika aralıklı). Sağlıklı rulmanlarda (bearing_1/2) arızalı kanalların ilk uyarısından önce hiç alarm yok (erken FP = 0).
 
-Isolation Forest, Z-Score'a göre ~15 saat daha erken uyardı, aynı sıfır yanlış pozitifle. PCA daha erken ama 3 yanlış pozitif ürettiği için birincil katman seçilmedi (detay: `docs/adr/0008-*`).
+**Neden önemli:** Tek veri setinde kalibre edilen bir tespit sistemi, ikinci bir veri setinde üç farklı arıza tipini yeniden kalibrasyonsuz yakaladı. Bu, genelleme sınırının hold-out testiyle doğrulandığı anlamına gelir — çoğu benzer çalışmanın atladığı bir adım.
 
-**Anomali dağılımı:** Tespit edilen anomalilerin **%97.5'i arızalı bearing_1'de** yoğunlaştı; sağlıklı rulmanlarda (bearing_2/3/4) yanlış pozitif oranı çok düşük — sistem doğru rulmanı ayırt ediyor.
+**Çift eksenin katkısı:** İç bilezik arızasında x ekseni (166 saat) arızayı y ekseninden (54 saat) çok daha erken gördü — çift eksenli izlemenin ölçülebilir getirisi.
 
 ## Ne Yapar
 
-- **Ingestion:** NASA IMS Bearing titreşim verisi, kontrollü hızda canlı akışa dönüştürülür (asyncio simülatör → Kafka). Her snapshot 8 chunk'a bölünür; stream-processor bunları `machine_id` bazında yeniden birleştirir (stateful reassembly).
-- **İşleme:** Her titreşim penceresinden sinyal özellikleri (RMS, kurtosis, crest factor, peak) çıkarılır.
+- **Ingestion:** NASA IMS Bearing verisi, kontrollü hızda canlı akışa dönüştürülür (asyncio simülatör → Kafka). Simülatör hem tek eksenli (Set 2, 4 kanal) hem çift eksenli (Set 1, 8 kanal) veriyi otomatik algılayarak işler. Her snapshot 8 chunk'a bölünür; stream-processor bunları `(dataset, machine_id, axis)` bazında yeniden birleştirir.
+- **İşleme:** Her titreşim penceresinden sinyal özellikleri (RMS, kurtosis, crest factor, peak) ve FFT bant enerjileri (BPFO/BPFI/BSF) çıkarılır.
 - **Anomali tespiti — dört detektör, canlı:**
-  - **Z-Score / hareketli ortalama** — baseline'a göre sapma (yorumlanabilir, birincil bildirim katmanı)
+  - **Z-Score / hareketli ortalama** — baseline'a göre sapma (yorumlanabilir, birincil bildirim katmanı; iki sette de genelleşen katman)
   - **Isolation Forest** — ağaç tabanlı, ölçeklenmiş zarf skoru
   - **PCA + Hotelling's T²** — çok değişkenli süreç izleme
   - **River (HalfSpaceTrees)** — çevrimiçi/artımlı öğrenme
-  - Her detektörün skoru `score_kind` ile ayrı etiketlenir (`zscore`, `if_score`/`extent`, `pca_t2`, `river`).
+  - Her detektörün skoru `score_kind` ile ayrı etiketlenir; baseline her `(dataset, machine_id, axis)` için ayrı öğrenilir.
 - **Bildirim:** Anomaliler Telegram'a iletilir (Celery + circuit breaker). Yalnız `zscore` ve `isolation_forest` yayımlanır; PCA/River kayda geçer ama bildirilmez.
-- **Görselleştirme:** TimescaleDB + Grafana ile canlı pano (RMS, kurtosis trendleri).
+- **Görselleştirme:** TimescaleDB + Grafana ile canlı pano, dataset filtresiyle (set1 / set2).
 
 ## Mimari
 
@@ -45,7 +47,7 @@ Simulator ──► Kafka (sensor.vibration.raw) ──► Stream Processor ─�
                                     Kafka (anomaly.detected) ◄────┴──► Notifier ──► Telegram
 ```
 
-Kafka topic'leri: `sensor.vibration.raw` (4 partition = 4 rulman), `sensor.vibration.features`, `anomaly.detected`, `anomaly.dlq`. Detay: [`docs/planning/01-architecture.md`](docs/planning/01-architecture.md)
+Kafka topic'leri: `sensor.vibration.raw` (4 partition), `sensor.vibration.features`, `anomaly.detected`, `anomaly.dlq`. Detay: [`docs/planning/01-architecture.md`](docs/planning/01-architecture.md)
 
 ## Teknoloji Yığını
 
@@ -71,41 +73,38 @@ cp .env.example .env
 # 2. Altyapıyı ayağa kaldır (Kafka, TimescaleDB, Redis, Grafana)
 docker compose up -d --build
 
-# 3. NASA IMS verisini `data/` altına yerleştir
-#    Set 2 (tek eksen): data/ims veya data/ims/2nd_test
-#      → DATASET_PATH=/data/ims  DATASET_NAME=set2
+# 3. NASA IMS verisini yerleştir (indirme: https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip)
+#    Set 2 (tek eksen): data/ims/2nd_test
 #    Set 1 (çift eksen): data/ims_set1/1st_test
-#      → DATASET_PATH=/data/ims_set1/1st_test  DATASET_NAME=set1
-#    (indirme: https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip)
 
-# 4. Testler
+# 4. Hangi seti çalıştıracağını .env ile seç
+#    DATASET_PATH=/data/ims_set1/1st_test  ve  DATASET_NAME=set1
+#    (set değiştirince stream-processor'ı --force-recreate ile yeniden başlat: RAM baseline karışmasın)
+
+# 5. Testler
 pytest
 ```
 
-Grafana panosu `http://localhost:3000` adresinde çalışır.
+Grafana panosu `http://localhost:3000` adresinde çalışır (üstte Dataset filtresi).
 
 ## Dokümantasyon
 
-Tüm planlama ve tasarım kararları konu bazında ayrı dosyalarda:
-
-- **[Planlama dokümanları](docs/planning/README.md)** — mimari, veri modeli, anomali tasarımı, test stratejisi, güvenlik, dayanıklılık, yol haritası
+- **[Planlama dokümanları](docs/planning/README.md)** — mimari, veri modeli, anomali tasarımı, test stratejisi, güvenlik, dayanıklılık
 - **[Karar kayıtları (ADR)](docs/adr/README.md)** — önemli mimari kararların gerekçeli kayıtları
 - **[AGENTS.md](AGENTS.md)** — AI kodlama ajanları için proje kuralları
+- **Analiz notebook'ları** — `ml/notebooks/` (Set 2 kalibrasyonu, FFT bant/teşhis, Set 1 hold-out karnesi)
 
 ## Veri Kaynağı
 
-NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşim) sinyali, run-to-failure test verisi. Seçim gerekçesi: [`docs/adr/0003-ims-over-cmapss.md`](docs/adr/0003-ims-over-cmapss.md)
+NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşim) sinyali, run-to-failure test verisi. Rexnord ZA-2115 rulman; karakteristik arıza frekansları BPFO=236 Hz, BPFI=297 Hz, BSF=278 Hz. Seçim gerekçesi: [`docs/adr/0003-ims-over-cmapss.md`](docs/adr/0003-ims-over-cmapss.md)
 
 ## Bilinen Sınırlamalar ve Gelecek İş
 
 Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
-- **FFT bant enerjisi** hesaplanır (`bpfo`/`bpfi`/`bsf`, ZA-2115 merkezleri) ve
-  `fft_band_energy` JSONB'ye yazılır. **Teşhis/alarm yok** — Z-Score/IF vektörüne
-  girmez (ADR-0010). Ham-rFFT ve envelope teşhis denendi: ikisi de Set 2'de 4/4,
-  Set 1 hold-out tutmadı. Canlı `fault_type` yok (ADR-0011–0013).
-- **Eşikler Set 2'ye kalibre.** Başka test setine (Set 1/3) geçilirse kalibrasyon scripti yeniden çalıştırılmalı.
-- **River** çevrimiçi öğrenme detektörü kayda geçiyor ancak sistematik olarak taranmadı/kalibre edilmedi.
+- **Tespit genelleşiyor, teşhis genelleşmiyor.** Z-Score tabanlı anomali *tespiti* iki sette, üç arıza tipinde yeniden kalibrasyonsuz çalışıyor. Ancak FFT tabanlı arıza *tipi teşhisi* (BPFO/BPFI/BSF ayrımı) Set 2'ye kalibre; Set 1 hold-out testinde genellenmedi (iç bilezik/bilye farklı spektral imza taşıyor). Genel arıza-tipi teşhisi gelecek iş.
+- **ML katmanı sete özgü kalibrasyon istiyor.** Isolation Forest / PCA, Set 2'de güçlü (89 saat lead), ancak Set 1'de yeniden kalibrasyon olmadan gürültülü. Z-Score'un göreli ölçüsü (baseline'dan kaç sigma) sayesinde daha iyi genelleştiği gözlendi — basit, ilkeye dayalı yöntemin genelleme avantajı.
+- **Set 3 ile üçüncü hold-out** yapılmadı; kalibrasyonun tam genelliği ancak üçüncü bağımsız setle kesinleşir.
 
 ## Lisans
 

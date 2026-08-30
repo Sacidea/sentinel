@@ -20,6 +20,9 @@ Sira silinmez (ADR-0011 otopsi, ADR-0012 kapanis, ADR-0013 envelope).
 - `ims_set2_zscore_calibration.py` / `ims_set2_zscore_calibration.md` — Z-Score esik taramasi; lead time NASA test sonuna gore (ADR-0006, 5.0/8.0, yalniz Set 2).
 - `ims_set1_zscore.py` / `ims_set1_zscore.md` — Z-Score Set 1 hold-out. Ayni 5.0/8.0 kilit, retune yok; x/y ayri. ML yok.
 - `ims_set2_ml_calibration.py` / `ims_set2_ml_calibration.md` — IsolationForest / PCA nicelik taramasi (ADR-0008, 0.995/0.999 IF+zarf). Gercek 984 Set 2 dosyasi.
+- `ims_domain_invariant_if.py` / `ims_domain_invariant_if.md` — IF Set 2 egitim, Set 1 test. Ham vs kanal-ici z-norm. Canli IF/esik yok.
+- `ims_if_set1_same_domain.py` / `ims_if_set1_same_domain.md` — canli IF gurultusu otopsi: per-kanal same-domain vs Set 2 transfer. Canli IF degismez.
+- `ims_if_pooled.py` / `ims_if_pooled.md` — IF dataset-havuzu vs per-kanal. Set 1 saglikli sessiz, Set 2 lead bozuldu. Canli yok.
 - `ims_set2_fft_bands.py` / `ims_set2_fft_bands.md` — FFT bant enerjisi (BPFO/BPFI/BSF); teshis yok (ADR-0010).
 - `ims_set2_fft_diagnosis.py` / `ims_set2_fft_diagnosis.md` — ham-rFFT teshis, Set 2 kalibrasyon (ADR-0011). Canli yok.
 - `ims_set1_fft_diagnosis.py` / `ims_set1_fft_diagnosis.md` — ham-rFFT Set 1 hold-out. 4/4 tutmadi.

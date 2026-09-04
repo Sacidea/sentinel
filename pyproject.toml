@@ -1,5 +1,34 @@
-# Workspace geneli araç konfigürasyonu.
-# Her servisin kendi bağımlılıkları kendi pyproject.toml'unda; bu dosya ortak lint/type/test ayarı.
+# Workspace geneli araç konfigürasyonu + uv kilit kökü.
+# Servis bağımlılıkları kendi pyproject.toml'unda; bu dosya lint/type/test ve lock.
+
+[project]
+name = "sentinel"
+version = "0.1.0"
+description = "IMS vibration demo stack — lock root, not a published package"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "pytest>=8.0.0",
+    "pip-audit>=2.7.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "libs/contracts",
+    "services/simulator",
+    "services/stream-processor",
+    "services/notifier",
+]
+
+[tool.uv.sources]
+libs-contracts = { workspace = true }
+
+[tool.uv]
+package = false
 
 [tool.ruff]
 line-length = 100
@@ -68,5 +97,5 @@ python_files = "test_*.py"
 addopts = "-v --strict-markers --import-mode=importlib"
 markers = [
     "unit: saf birim testleri (I/O yok)",
-    "integration: gerçek Kafka/DB gerektiren testler (testcontainers)",
+    "integration: servisler arasi (fake port veya dis bagimlilik)",
 ]

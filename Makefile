@@ -1,5 +1,5 @@
 # Sık kullanılan komutlar. `make <hedef>` ile çalıştır.
-.PHONY: help up down logs test test-unit lint format type check install-hooks
+.PHONY: help up down logs test test-unit test-ci lint format type check install-hooks
 
 help:            ## Bu yardımı göster
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -19,6 +19,9 @@ test:            ## Tüm testleri çalıştır
 
 test-unit:       ## Yalnız birim testleri (hızlı, I/O yok)
 	pytest -m unit
+
+test-ci:         ## CI ile aynı: unit + integration (fake port)
+	pytest -m "unit or integration"
 
 lint:            ## ruff ile lint
 	ruff check .

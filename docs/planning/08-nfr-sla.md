@@ -5,7 +5,7 @@ Sayısal hedefler olmadan "gerçek zamanlı" iddiası ölçülemez. Bu projede g
 ## Performans Hedefleri
 | Metrik | Hedef | Not |
 |---|---|---|
-| Uçtan uca gecikme (event → bildirim) | < 2 sn* | Simülatör yayınından Telegram'a. *Chunk reassembly beklemesi dahil: son chunk gelene veya timeout'a kadar. Timeout PLAYBACK_SPEED'e bağlı (bkz. 07). |
+| Uçtan uca gecikme (event → bildirim) | < 2 sn* | Simülatör yayınından Telegram'a. *Chunk reassembly beklemesi dahil: son chunk gelene veya timeout'a kadar. Timeout PLAYBACK_INTERVAL_SEC'e bağlı (bkz. 07, ADR-0005). |
 | Özellik çıkarım süresi (1 pencere) | < 50 ms | 20.480 nokta üzerinde RMS+kurtosis+FFT |
 | Throughput | ≥ 50 pencere/sn | Tek stream-processor instance |
 | Consumer lag | ~0 (sabit kalmalı) | Lag sürekli artıyorsa işleme yavaş demektir |

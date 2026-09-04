@@ -22,5 +22,6 @@ Snapshot **8 chunk**'a bölünerek yayınlanır (`snapshot_id`, `chunk_index`, `
 Chunk'lar **`machine_id`** ile partition'lanır (`snapshot_id` ile değil). Aksi halde aynı snapshot'ın chunk'ları farklı instance'lara dağılır, reassembly çöker.
 
 ## Timeout Politikası
-- Dinamik: `max(FLOOR, (600 / PLAYBACK_SPEED) * FACTOR)`.
+- Dinamik: `max(FLOOR, PLAYBACK_INTERVAL_SEC * FACTOR)` — oynatma hızının nasıl ifade edildiği
+  ADR-0005 ile güncellendi (eskiden `600 / PLAYBACK_SPEED`).
 - ≥ %50 chunk → kısmi işle (`is_complete=false`); < %50 → DLQ.

@@ -4,7 +4,8 @@
 help:            ## Bu yardımı göster
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
 
-up:              ## Tüm stack'i ayağa kaldır
+up:              ## Tüm stack'i ayağa kaldır (tek komut)
+	@test -f .env || cp .env.example .env
 	docker compose up -d --build
 
 down:            ## Tüm stack'i durdur

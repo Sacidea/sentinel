@@ -35,7 +35,8 @@
 
 ### Değerlendirme
 - Anomali skorunun yükseldiği an işaretlenir
-- **Lead time**: "arızadan X saat önce yakaladı"
+- **Lead time**: "arızadan X saat önce yakaladı" — IMS'te NASA arızayı test sonunda duyurur; çapan son dosyadır (Set 2 kalibrasyonu: ADR-0006)
 - Yanlış pozitif oranı raporlanır
+- Z-Score varsayılan eşikleri **Set 2'ye özel** kalibre edilmiştir; başka sete taşınmaz
 
 **Mimari not:** ML modeli `domain/detectors.py` içinde `AnomalyDetector` port'unu implemente eder. Offline eğitim ile online skorlama ayrı; artefakt `ml/models/`'dan yüklenir.

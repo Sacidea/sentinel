@@ -9,7 +9,7 @@ class MessagePublisher(Protocol):
     async def publish(self, topic: str, key: str, message: bytes) -> None:
         """
         Mesajı asenkron olarak kuyruğa yazar.
-        
+
         Args:
             topic: Hedef topic adı (örn. sensor.vibration.raw)
             key: Partitioning için kullanılacak anahtar (örn. machine_id)

@@ -4,6 +4,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["ml/notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
@@ -36,6 +37,22 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "psycopg.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "river.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pybreaker.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -33,8 +33,8 @@ Snapshot'lar 8 chunk halinde geldiği için (bkz. 03), yeni hata modları:
 
 ### Eksik / Geç Chunk (Timeout)
 - İlk chunk geldikten sonra dinamik bir timeout başlar:
-  `reassembly_timeout = max(TIMEOUT_FLOOR, (600 / PLAYBACK_SPEED) * TIMEOUT_FACTOR)`
-  (600 = nominal snapshot aralığı sn; taban ve çarpan `.env`'de ayarlanır.)
+  `reassembly_timeout = max(TIMEOUT_FLOOR, PLAYBACK_INTERVAL_SEC * TIMEOUT_FACTOR)`
+  (Snapshot'lar arası bekleme, taban ve çarpan `.env`'de ayarlanır; bkz. ADR-0005.)
 - Timeout dolduğunda:
   - **≥ %50 chunk (≥4/8):** kısmi işle, `is_complete=false`, `chunks_received` işaretle.
   - **< %50 chunk:** DLQ'ya at (güvenilir özellik çıkarılamaz).

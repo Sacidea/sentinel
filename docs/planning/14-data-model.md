@@ -17,12 +17,13 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `time` | `TIMESTAMPTZ NOT NULL` | Özelliğin ait olduğu an (event `occurred_at`) |
 | `machine_id` | `TEXT NOT NULL` | `bearing_1..4` |
 | `axis` | `TEXT NOT NULL` | `x` / `y` |
+| `dataset` | `TEXT NOT NULL` | `set1` / `set2`; eski satırlar `unknown` (ADR-0014) |
 | `snapshot_id` | `UUID NOT NULL` | İzlenebilirlik (chunk reassembly kaynağı) |
 | `rms` | `DOUBLE PRECISION` | Kök ortalama kare |
 | `kurtosis` | `DOUBLE PRECISION` | Basıklık (erken arıza göstergesi) |
 | `crest_factor` | `DOUBLE PRECISION` | Tepe/RMS oranı |
 | `peak` | `DOUBLE PRECISION` | Mutlak tepe genlik |
-| `fft_band_energy` | `JSONB` | Frekans bantlarındaki enerji (opsiyonel, bant→değer) |
+| `fft_band_energy` | `JSONB` | BPFO/BPFI/BSF bant gücü (ADR-0010; teşhis yok). Eski satırlar NULL. |
 | `is_complete` | `BOOLEAN NOT NULL` | Kısmi snapshot'tan mı geldi (bkz. 07) |
 | `chunks_received` | `SMALLINT NOT NULL` | Kaç chunk'tan hesaplandı |
 
@@ -34,6 +35,7 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 - Otomatik: `time DESC` (hypertable varsayılanı)
 - `CREATE INDEX ON vibration_features (machine_id, time DESC);`  — makine bazlı zaman sorguları
 - `CREATE INDEX ON vibration_features (machine_id, axis, time DESC);` — eksen ayrımı gerekiyorsa
+- `CREATE INDEX ON vibration_features (dataset, machine_id, axis, time DESC);` — set ayrımı (ADR-0014)
 
 ### 2. `anomaly_events` — anomali olayları
 `AnomalyDetected` event'inin kalıcı kaydı. Seyrek olay; hypertable şart değil ama tutarlılık için zamana göre indekslenir.
@@ -44,9 +46,12 @@ Stream-processor'ın her (kısmi veya tam) snapshot'tan çıkardığı özellikl
 | `occurred_at` | `TIMESTAMPTZ NOT NULL` | Anomali anı |
 | `machine_id` | `TEXT NOT NULL` | |
 | `axis` | `TEXT` | |
+| `dataset` | `TEXT NOT NULL` | `set1` / `set2`; eski satırlar `unknown` (ADR-0014) |
 | `metric` | `TEXT NOT NULL` | Hangi özellik tetikledi (örn. `kurtosis`) |
 | `value` | `DOUBLE PRECISION NOT NULL` | Özelliğin değeri |
-| `z_score` | `DOUBLE PRECISION NOT NULL` | Sapma büyüklüğü |
+| `z_score` | `DOUBLE PRECISION` | Katman 1 sapması; Katman 2 NULL (ADR-0009, 002) |
+| `anomaly_score` | `DOUBLE PRECISION` | Katman 2 tetikleyen skor; Katman 1 ve eski satırlar NULL |
+| `score_kind` | `TEXT` | `zscore` / `if_score` / `extent` / `pca_t2` / `pca_spe` / `river` |
 | `severity` | `TEXT NOT NULL` | `warning` / `critical` |
 | `is_complete` | `BOOLEAN NOT NULL` | Kısmi veriden mi (güven göstergesi) |
 | `detector` | `TEXT NOT NULL` | `zscore` / `isolation_forest` / `pca` — hangi model buldu |
@@ -61,11 +66,12 @@ Anomali tespiti için "normal"in ne olduğunu tutar (detaylı mantık 15-anomaly
 |---|---|---|
 | `machine_id` | `TEXT` | |
 | `axis` | `TEXT` | |
+| `dataset` | `TEXT` | `set1` / `set2`; eski satırlar `unknown` |
 | `metric` | `TEXT` | Örn. `rms`, `kurtosis` |
 | `mean` | `DOUBLE PRECISION` | Baseline ortalama |
 | `std` | `DOUBLE PRECISION` | Baseline standart sapma (Z-Score paydası) |
 | `updated_at` | `TIMESTAMPTZ` | En son ne zaman güncellendi |
-| PK | `(machine_id, axis, metric)` | Her kombinasyon için tek satır |
+| PK | `(dataset, machine_id, axis, metric)` | Her set×rulman×eksen×metrik için tek satır |
 
 ## Continuous Aggregate (Materialized, otomatik yenilenen)
 
@@ -106,7 +112,7 @@ SELECT add_retention_policy('vibration_features', INTERVAL '30 days');
 `anomaly_events` daha uzun tutulur (olaylar değerli, hacim düşük) — retention koymayabilir veya çok uzun tutabiliriz.
 
 ## Migration Stratejisi
-- Şema, `infra/timescaledb/` altında sıralı SQL dosyaları olarak tutulur (`001_init.sql`, `002_hypertables.sql`, `003_caggs.sql` ...).
+- Şema, `infra/timescaledb/` altında sıralı SQL dosyaları olarak tutulur (`001_init.sql`, `002_score_kind.sql`, …).
 - Basit tutulur (Alembic gibi bir araç bu proje için fazla); docker-compose ilk açılışta bu SQL'leri çalıştırır.
 - Her migration idempotent yazılır (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).
 

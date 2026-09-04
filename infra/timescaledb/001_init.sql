@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS vibration_features (
     time            TIMESTAMPTZ       NOT NULL,
     machine_id      TEXT              NOT NULL,
     axis            TEXT              NOT NULL,
+    dataset         TEXT              NOT NULL DEFAULT 'unknown',
     snapshot_id     UUID              NOT NULL,
     rms             DOUBLE PRECISION,
     kurtosis        DOUBLE PRECISION,
@@ -29,6 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_vf_machine_time
     ON vibration_features (machine_id, time DESC);
 CREATE INDEX IF NOT EXISTS idx_vf_machine_axis_time
     ON vibration_features (machine_id, axis, time DESC);
+CREATE INDEX IF NOT EXISTS idx_vf_dataset_machine_axis_time
+    ON vibration_features (dataset, machine_id, axis, time DESC);
 
 -- =====================================================================
 -- 2. anomaly_events — anomali olayları (idempotency: event_id PK)
@@ -38,6 +41,7 @@ CREATE TABLE IF NOT EXISTS anomaly_events (
     occurred_at  TIMESTAMPTZ       NOT NULL,
     machine_id   TEXT              NOT NULL,
     axis         TEXT,
+    dataset      TEXT              NOT NULL DEFAULT 'unknown',
     metric       TEXT              NOT NULL,
     value        DOUBLE PRECISION  NOT NULL,
     z_score      DOUBLE PRECISION  NOT NULL,
@@ -56,9 +60,10 @@ CREATE INDEX IF NOT EXISTS idx_ae_machine_time
 CREATE TABLE IF NOT EXISTS machine_baseline (
     machine_id  TEXT              NOT NULL,
     axis        TEXT              NOT NULL,
+    dataset     TEXT              NOT NULL DEFAULT 'unknown',
     metric      TEXT              NOT NULL,
     mean        DOUBLE PRECISION,
     std         DOUBLE PRECISION,
     updated_at  TIMESTAMPTZ,
-    PRIMARY KEY (machine_id, axis, metric)
+    PRIMARY KEY (dataset, machine_id, axis, metric)
 );

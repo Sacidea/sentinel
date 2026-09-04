@@ -2,6 +2,7 @@ import asyncio
 import signal
 
 import structlog
+
 from simulator.application.runner import SimulatorRunner
 from simulator.config import settings
 from simulator.infrastructure.kafka_publisher import KafkaPublisherAdapter
@@ -25,6 +26,7 @@ async def main() -> None:
         publisher=publisher,
         playback_interval_sec=settings.PLAYBACK_INTERVAL_SEC,
         topic=settings.KAFKA_TOPIC,
+        dataset_name=settings.DATASET_NAME,
     )
 
     # Graceful shutdown için sinyal yakalama

@@ -54,7 +54,7 @@ Stateful reassembly (ADR-0004), sistemin en riskli bileşenidir. Aşağıdaki se
 ### Timeout hesabı
 | # | Senaryo | Beklenen |
 |---|---|---|
-| T14 | PLAYBACK_SPEED yüksek (örn. 6000) | `reassembly_timeout` TIMEOUT_FLOOR'a iner, sıfır/negatif olmaz |
-| T15 | PLAYBACK_SPEED düşük (örn. 1) | Timeout formülle büyür, erken kapatma olmaz |
+| T14 | PLAYBACK_INTERVAL_SEC çok küçük (örn. 0,1 sn) | `reassembly_timeout` TIMEOUT_FLOOR'a iner, sıfır/negatif olmaz |
+| T15 | PLAYBACK_INTERVAL_SEC büyük (örn. 600 sn) | Timeout formülle büyür, erken kapatma olmaz |
 
 **Öncelik:** T1-T8 çekirdek (bunlar geçmeden reassembler "bitti" sayılmaz). T9-T15 dayanıklılık senaryolarıdır. Bu testlerin sürekli kırılması, stateful reassembly yaklaşımının bu proje için fazla karmaşık olduğuna ve chunk'ların bağımsız işlenmesine (reassembly'siz) geçmenin daha uygun olabileceğine işarettir.

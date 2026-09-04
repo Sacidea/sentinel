@@ -7,7 +7,7 @@ import structlog
 def setup_logging(level: str = "INFO") -> None:
     """
     Structlog konfigürasyonunu ayarlar.
-    Konsol için okunabilir (ConsoleRenderer), 
+    Konsol için okunabilir (ConsoleRenderer),
     üretim ortamı için JSON loglama sağlayacak altyapı.
     """
     numeric_level = getattr(logging, level.upper(), logging.INFO)
@@ -24,7 +24,7 @@ def setup_logging(level: str = "INFO") -> None:
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
-            structlog.dev.ConsoleRenderer()  # Konsol dostu renkli çıktı
+            structlog.dev.ConsoleRenderer(),  # Konsol dostu renkli çıktı
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),

@@ -37,18 +37,21 @@ Event modelleri `libs/contracts/` içinde pydantic olarak tanımlanır; tüm ser
 | `sensor.vibration.features` | `VibrationFeatures` | stream-processor | (analizciler) |
 | `anomaly.detected` | `AnomalyDetected` | stream-processor | notifier |
 
-**`AnomalyDetected` alanları (örnek):**
+**`AnomalyDetected` alanları (örnek, `schema_version=3`, ADR-0009 + ADR-0014):**
 ```
 event_id: UUID
 occurred_at: datetime      # UTC, tz-aware
 machine_id: str
+dataset: str               # set1 / set2; eski Kafka'da yok → "unknown"
 metric: str
 value: float
-z_score: float
+z_score: float | None      # yalnız Katman 1 (detector=zscore); v1'de her detector
+anomaly_score: float | None  # Katman 2; v1'de yok (default None)
+score_kind: Literal[...] | None  # v2+; v1'de yok, detector'dan türetilir
 severity: Literal["warning", "critical"]
-schema_version: int        # şema evrimi
+schema_version: int        # şema evrimi (1 → 2 skor alanları, 2 → 3 dataset)
 ```
-`schema_version`, eski/yeni consumer'ların bir arada çalışmasını sağlar — gevşek bağlılığın somut karşılığı.
+`schema_version`, eski/yeni consumer'ların bir arada çalışmasını sağlar — gevşek bağlılığın somut karşılığı. v1 Kafka kalıntısında `anomaly_score`/`score_kind` anahtarı yoktur (opsiyonel); consumer `detector`'dan `score_kind` türetir, skoru `z_score`'dan okur.
 
 
 ## Ham Veri Akışı: Chunk'lı Snapshot (Stateful Reassembly)
@@ -62,6 +65,7 @@ chunk_index: int           # 0 .. total_chunks-1
 total_chunks: int          # 8
 machine_id: str            # PARTITION ANAHTARI (snapshot_id DEĞİL!)
 axis: Literal["x", "y"]
+dataset: str               # set1 / set2; eski mesajda yoksa "unknown" (ADR-0014)
 samples: list[float]       # bu chunk'ın ham noktaları (~2560)
 occurred_at: datetime      # yayın anı (canlı zaman ekseni)
 source_timestamp: datetime # orijinal dosya zaman damgası

@@ -15,10 +15,10 @@ Koda başlamadan önce yapılan işler, sonradan hata ayıklamaktan çok daha uc
 6. **Notifier (stub):** `anomaly.detected` topic'ini dinler; bir mesaj gelince gerçek Telegram yerine sadece log basar. Amaç: bildirim zinciri bağlı mı.
 
 ### İskelet "yürüdü" sayılır eğer:
-- [ ] `docker compose up` tek komutla tüm stack'i kaldırıyor
-- [ ] Dummy mesaj simülatörden çıkıp Grafana'da görünüyor
-- [ ] Manuel yayınlanan bir `anomaly.detected` mesajı notifier log'unda beliriyor
-- [ ] Bir servisi durdurup başlatınca sistem kaldığı yerden devam ediyor (Kafka tampon)
+- [x] `docker compose up` tek komutla tüm stack'i kaldırıyor
+- [x] Dummy mesaj simülatörden çıkıp Grafana'da görünüyor
+- [x] Manuel yayınlanan bir `anomaly.detected` mesajı notifier log'unda beliriyor
+- [x] Bir servisi durdurup başlatınca sistem kaldığı yerden devam ediyor (Kafka tampon)
 
 **Kural:** İskelet yürümeden hiçbir gerçek iş mantığı (özellik çıkarımı, ML, reassembly) yazılmaz.
 

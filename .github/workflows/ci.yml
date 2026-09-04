@@ -15,25 +15,20 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Bağımlılıkları kur
+      - name: Bagimliliklari kur
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy pytest pydantic
-          # servis bağımlılıkları için: pip install -e ./libs/contracts vb.
+          pip install ruff mypy pytest
+          pip install ./libs/contracts ./services/simulator ./services/stream-processor ./services/notifier
 
       - name: Lint (ruff)
         run: ruff check .
 
-      - name: Format kontrolü (ruff)
+      - name: Format kontrolu (ruff)
         run: ruff format --check .
 
-      - name: Tip kontrolü (mypy)
-        run: mypy . || true    # başlangıçta uyarı; strict domain zorunlu olunca kaldır
-
-      - name: Güvenlik denetimi (pip-audit)
-        run: |
-          pip install pip-audit
-          pip-audit || true     # başlangıçta bilgilendirme amaçlı
+      - name: Tip kontrolu (domain, strict)
+        run: mypy --strict services/stream-processor/src/stream_processor/domain
 
       - name: Birim testleri
         run: pytest -m unit

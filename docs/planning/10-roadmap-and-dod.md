@@ -24,6 +24,8 @@
 - Uçtan uca entegrasyon testi
 - Idempotency + DLQ (bkz. 07)
 
+**Durum:** Katman 2 warmup+freeze. IF nicelik 0.995/0.999 Set 2'de tarandı (ADR-0008, lead 89.3 saat, FP=0). PCA aynı nicelikte FP=3. FFT bant enerjisi kayda gider, tespite girmez (ADR-0010). Ham-rFFT, envelope enerji ve tepe belirginliği teşhis offline ve kapalı; canlı `fault_type` yok (ADR-0011–0013, ADR-0015). Z-Score ayrı, ADR-0006.
+
 ### Hafta 3 — Görselleştirme + Doküman + Cila
 - Grafana dashboard (kod olarak)
 - (Opsiyonel) FastAPI + WebSocket

@@ -5,7 +5,7 @@ dogru cikti” sayilmaz.
 
 ## Teshis izi (ham-rFFT → envelope)
 
-Sira silinmez (ADR-0011 otopsi, ADR-0012 kapanis, ADR-0013 envelope).
+Sira silinmez (ADR-0011 otopsi, ADR-0012 kapanis, ADR-0013 envelope, ADR-0015 belirginlik kapandi).
 
 1. Bant enerjisi kayda gider, tespite girmez — `ims_set2_fft_bands.md` (ADR-0010).
 2. Ham-rFFT teshis Set 2'de 4/4; bearing_4 enerji-orani tuzaği — `ims_set2_fft_diagnosis.md`.
@@ -13,6 +13,10 @@ Sira silinmez (ADR-0011 otopsi, ADR-0012 kapanis, ADR-0013 envelope).
 4. Envelope (Hilbert 2–10 kHz): Set 2 4/4 (`companion_z=25`); Set 1 hold-out
    yine 4/4 tutmadi — `ims_set2_envelope_diagnosis.md`, `ims_set1_envelope_diagnosis.md`.
    Canli `fault_type` yok.
+5. Tepe belirginligi + yan bant (ADR-0015, **kapandi**): yanlis etiket dustu
+   (Set 1 orta 0 yanlis); arizali orta %100 belirsiz; dogru etiket Z-Score
+   tespitinden 290–900 snapshot sonra. Alarm-capali pencere de bu ciftte yok.
+   `ims_envelope_prominence_diagnosis.md`. Canli `fault_type` acilmadi.
 
 ## Diger karneler
 
@@ -28,3 +32,4 @@ Sira silinmez (ADR-0011 otopsi, ADR-0012 kapanis, ADR-0013 envelope).
 - `ims_set1_fft_diagnosis.py` / `ims_set1_fft_diagnosis.md` — ham-rFFT Set 1 hold-out. 4/4 tutmadi.
 - `ims_set2_envelope_diagnosis.py` / `ims_set2_envelope_diagnosis.md` — envelope Set 2 (ADR-0013, C=25).
 - `ims_set1_envelope_diagnosis.py` / `ims_set1_envelope_diagnosis.md` — envelope Set 1 hold-out. 4/4 tutmadi.
+- `ims_envelope_prominence_diagnosis.py` / `ims_envelope_prominence_diagnosis.md` — tepe belirginligi + yan bant (ADR-0015, kapandi). Canli `fault_type` yok.

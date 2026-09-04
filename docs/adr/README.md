@@ -18,3 +18,4 @@
 | 0012 | Ham-rFFT teşhis kapanır; sonraki adım envelope | Kabul edildi; uygulama ADR-0013 |
 | 0013 | Envelope teşhisi offline; canlı yok | Kabul edildi |
 | 0014 | `dataset` alanı — Set 1/Set 2 baseline karışmaz (`schema_version` 3) | Kabul edildi |
+| 0015 | Envelope tepe belirginliği teşhisi kapandı; canlı `fault_type` yok | Kabul edildi (kapatıldı) |

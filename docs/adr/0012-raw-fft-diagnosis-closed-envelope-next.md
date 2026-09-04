@@ -3,7 +3,8 @@
 - **Durum:** Kabul edildi
 - **Tarih:** 2026-08-29
 - **İlgili:** ADR-0011 (offline ham-FFT denemesi), ADR-0010 (bant enerjisi kaydi),
-  ADR-0007 (FFT ertelemesi), ADR-0013 (envelope denemesi)
+  ADR-0007 (FFT ertelemesi), ADR-0013 (envelope denemesi), ADR-0015 (belirginlik
+  kapandi; 0012 karari degismez)
 
 ## Baglam
 

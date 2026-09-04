@@ -15,9 +15,7 @@ from stream_processor.domain.bearing_frequencies import (
 )
 
 
-def rfft_band_energy(
-    signal: NDArray[np.float64], *, sample_rate_hz: float
-) -> dict[str, float]:
+def rfft_band_energy(signal: NDArray[np.float64], *, sample_rate_hz: float) -> dict[str, float]:
     """rfft gucu: her karakteristik icin 1.+2.+3. harmonik, ±BAND_HALF_WIDTH_HZ."""
     empty = dict.fromkeys(CHARACTERISTIC_HZ, 0.0)
     if signal.size < 2 or sample_rate_hz <= 0.0:

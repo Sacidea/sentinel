@@ -91,7 +91,9 @@ Bir rulman kritik bölgeye girince her snapshot alarm üretmemeli (Telegram spam
   kaydedilir** (ADR-0010) ama bu katmanın vektörüne **girmez**; canlı teşhis/alarm yok.
   Offline ham-rFFT kuralı Set 2'de 4/4, Set 1 hold-out 4/4 tutmadı (ADR-0011
   otopsi). Envelope (Hilbert) Set 2'de 4/4 (`companion_z=25`), Set 1 yine
-  tutmadı (ADR-0013). `anomaly_events`'e yazılmaz.
+  tutmadı (ADR-0013). Tepe belirginliği yanlış etiketi indirdi, teşhis
+  edilebilirliği ve alarm-çapalı pencereyi bu çiftte çözmedi (ADR-0015
+  kapandı). `anomaly_events`'e yazılmaz.
 - Soğuk başlangıç Z-Score ile aynı `BASELINE_WINDOW`; **sonra freeze** (boiling frog — River da online güncellenmez).
 - `anomaly_events.detector` alanı katmanı ayırt eder (`zscore` / `isolation_forest` / `pca` / `river`).
 - Katman 1 ile 2 aynı snapshot'ta paralel çalışır; debounce anahtarına `detector` dahildir.

@@ -48,13 +48,44 @@ def envelope_band_energy(
     empty = dict.fromkeys(CHARACTERISTIC_HZ, 0.0)
     if signal.size < 2 or sample_rate_hz <= 0.0:
         return empty
-    centered = signal - float(np.mean(signal))
-    filtered = _rfft_bandpass(
-        centered, sample_rate_hz=sample_rate_hz, lo_hz=lo_hz, hi_hz=hi_hz
-    )
-    envelope = _hilbert_envelope(filtered)
-    envelope = envelope - float(np.mean(envelope))
+    envelope = _demean_envelope(signal, sample_rate_hz=sample_rate_hz, lo_hz=lo_hz, hi_hz=hi_hz)
     return rfft_band_energy(envelope, sample_rate_hz=sample_rate_hz)
+
+
+def envelope_magnitude_spectrum(
+    samples: Sequence[float],
+    *,
+    sample_rate_hz: float = SAMPLE_RATE_HZ,
+    lo_hz: float = ENVELOPE_BANDPASS_LO_HZ,
+    hi_hz: float = ENVELOPE_BANDPASS_HI_HZ,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Band-pass + Hilbert zarf; Hann * rFFT genlik. Teshis buradan okur, enerji kovasi degil."""
+    if len(samples) == 0:
+        raise ValueError("Ozellik cikarimi icin ornek listesi bos olamaz.")
+    signal = np.asarray(samples, dtype=np.float64)
+    if not np.all(np.isfinite(signal)):
+        raise ValueError("Ornekler sonlu olmali; NaN/inf iceren pencere islenmez.")
+    n_samples = int(signal.size)
+    if n_samples < 2 or sample_rate_hz <= 0.0:
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.float64)
+    envelope = _demean_envelope(signal, sample_rate_hz=sample_rate_hz, lo_hz=lo_hz, hi_hz=hi_hz)
+    windowed = envelope * np.hanning(n_samples)
+    freqs = np.fft.rfftfreq(n_samples, d=1.0 / sample_rate_hz)
+    magnitude = np.abs(np.fft.rfft(windowed))
+    return freqs, magnitude
+
+
+def _demean_envelope(
+    signal: NDArray[np.float64],
+    *,
+    sample_rate_hz: float,
+    lo_hz: float,
+    hi_hz: float,
+) -> NDArray[np.float64]:
+    centered = signal - float(np.mean(signal))
+    filtered = _rfft_bandpass(centered, sample_rate_hz=sample_rate_hz, lo_hz=lo_hz, hi_hz=hi_hz)
+    envelope = _hilbert_envelope(filtered)
+    return envelope - float(np.mean(envelope))
 
 
 def _rfft_bandpass(

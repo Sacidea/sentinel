@@ -65,27 +65,18 @@ Kafka topic'leri: `sensor.vibration.raw` (4 partition), `sensor.vibration.featur
 
 ## Kurulum
 
+IMS dosyası yoksa simülatör **sentetik** titreşime geçer; Telegram `CHANGE_ME` ise bildirim log'a düşer (servis düşmez).
+
 ```bash
-# 1. Ortam değişkenlerini hazırla
 cp .env.example .env
-# .env içindeki TELEGRAM_BOT_TOKEN ve TELEGRAM_CHAT_ID alanlarını doldur
-
-# 2. Altyapıyı ayağa kaldır (Kafka, TimescaleDB, Redis, Grafana)
 docker compose up -d --build
-
-# 3. NASA IMS verisini yerleştir (indirme: https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip)
-#    Set 2 (tek eksen): data/ims/2nd_test
-#    Set 1 (çift eksen): data/ims_set1/1st_test
-
-# 4. Hangi seti çalıştıracağını .env ile seç
-#    DATASET_PATH=/data/ims_set1/1st_test  ve  DATASET_NAME=set1
-#    (set değiştirince stream-processor'ı --force-recreate ile yeniden başlat: RAM baseline karışmasın)
-
-# 5. Testler
-pytest
 ```
 
-Grafana panosu `http://localhost:3000` adresinde çalışır (üstte Dataset filtresi).
+Pano: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`). NASA IMS kullanmak için Set 2'yi `data/ims`, Set 1'i `data/ims_set1/1st_test` altına koy; set seçimi `.env` içinde `DATASET_PATH` / `DATASET_NAME`. Set değiştirince `docker compose up -d --force-recreate stream-processor`.
+
+```bash
+pytest -m unit
+```
 
 ## Dokümantasyon
 
@@ -96,13 +87,13 @@ Grafana panosu `http://localhost:3000` adresinde çalışır (üstte Dataset fil
 
 ## Veri Kaynağı
 
-NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşim) sinyali, run-to-failure test verisi. Rexnord ZA-2115 rulman; karakteristik arıza frekansları BPFO=236 Hz, BPFI=297 Hz, BSF=278 Hz. Seçim gerekçesi: [`docs/adr/0003-ims-over-cmapss.md`](docs/adr/0003-ims-over-cmapss.md)
+NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşim) sinyali, run-to-failure test verisi. Rexnord ZA-2115 rulman; karakteristik arıza frekansları BPFO=236 Hz, BPFI=297 Hz, BSF=278 Hz (**2×BSF**; temel BSF ~140 Hz, ADR-0015). Seçim gerekçesi: [`docs/adr/0003-ims-over-cmapss.md`](docs/adr/0003-ims-over-cmapss.md)
 
 ## Bilinen Sınırlamalar ve Gelecek İş
 
 Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
-- **Tespit genelleşiyor, teşhis genelleşmiyor.** Z-Score tabanlı anomali *tespiti* iki sette, üç arıza tipinde yeniden kalibrasyonsuz çalışıyor. Ancak FFT tabanlı arıza *tipi teşhisi* (BPFO/BPFI/BSF ayrımı) Set 2'ye kalibre; Set 1 hold-out testinde genellenmedi (iç bilezik/bilye farklı spektral imza taşıyor). Genel arıza-tipi teşhisi gelecek iş.
+- **Tespit genelleşiyor, teşhis genelleşmiyor.** Z-Score tabanlı anomali *tespiti* iki sette, üç arıza tipinde yeniden kalibrasyonsuz çalışıyor. Arıza *tipi teşhisi* (ham-rFFT, envelope enerji, tepe belirginliği) denendi ve kapandı: belirginlik yanlış etiketi indirdi, teşhis edilebilirliği ve alarm-çapalı pencereyi bu Set 1/Set 2 çiftinde çözmedi (ADR-0011–0013, ADR-0015). Canlı `fault_type` yok.
 - **ML katmanı sete özgü kalibrasyon istiyor.** Isolation Forest / PCA, Set 2'de güçlü (89 saat lead), ancak Set 1'de yeniden kalibrasyon olmadan gürültülü. Z-Score'un göreli ölçüsü (baseline'dan kaç sigma) sayesinde daha iyi genelleştiği gözlendi — basit, ilkeye dayalı yöntemin genelleme avantajı.
 - **Set 3 ile üçüncü hold-out** yapılmadı; kalibrasyonun tam genelliği ancak üçüncü bağımsız setle kesinleşir.
 

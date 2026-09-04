@@ -2,7 +2,8 @@
 
 - **Durum:** Kabul edildi
 - **Tarih:** 2026-08-29
-- **İlgili:** ADR-0012 (ham-rFFT kapanisi), ADR-0011 (ham-rFFT otopsi), ADR-0010 (kayit)
+- **İlgili:** ADR-0012 (ham-rFFT kapanisi), ADR-0011 (ham-rFFT otopsi), ADR-0010 (kayit),
+  ADR-0015 (belirginlik denendi ve kapandi; 0013 karari degismez)
 
 ## Baglam
 

@@ -38,6 +38,8 @@
 - `main` her zaman çalışır; `feat/*`, `fix/*` branch'leri PR ile birleşir.
 - Conventional Commits.
 - CI (GitHub Actions): her push'ta ruff + mypy + pytest; kırmızıysa merge yok.
+- **Sapma (2026-09-04):** `gh` yokken `feat/walking-skeleton` PR'siz `origin/main`'e
+  merge edildi. CI kapı değil rapor oldu. Kayıt: ADR-0016. Tercih yine PR'dır.
 
 ## Definition of Done (Her Görev İçin)
 Bir görev şu koşullar sağlanmadan "bitti" sayılmaz:

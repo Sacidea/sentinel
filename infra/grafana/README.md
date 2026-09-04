@@ -5,7 +5,10 @@ Walking skeleton panosu kod olarak provision edilir (`docs/planning/13-pre-codin
 - Datasource: `provisioning/datasources/timescaledb.yaml` (`uid: sentinel-timescaledb`)
 - Dashboard: `provisioning/dashboards/json/vibration-features.json`
 
-`make up` veya `docker compose up -d --build` sonrası: http://localhost:3000 (varsayılan `admin` / `admin`) → klasör **Sentinel** → **Vibration Features**.
+`make up` veya `docker compose up -d --build` sonrası: http://127.0.0.1:3000
+(`.env` içindeki `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD`; örnekte
+doldurulması zorunlu — varsayılan Grafana `admin`/`admin`'e güvenme).
+Klasör **Sentinel** → **Vibration Features**.
 
 Anomali panosu `anomaly_events` okur: Katman 1 `z_score`, Katman 2 `anomaly_score` + `score_kind` (ADR-0009). Eski satırlarda `score_kind` NULL olabilir; grafik `COALESCE(anomaly_score, z_score)` kullanır.
 

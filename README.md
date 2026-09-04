@@ -72,7 +72,10 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Pano: [http://localhost:3000](http://localhost:3000) (`admin` / `admin`). NASA IMS kullanmak için Set 2'yi `data/ims`, Set 1'i `data/ims_set1/1st_test` altına koy; set seçimi `.env` içinde `DATASET_PATH` / `DATASET_NAME`. Set değiştirince `docker compose up -d --force-recreate stream-processor`.
+Pano: [http://127.0.0.1:3000](http://127.0.0.1:3000) (`.env` → `GRAFANA_ADMIN_*`;
+doldurulması zorunlu, ADR-0016). NASA IMS: Set 2 `data/ims`, Set 1 `data/ims_set1/1st_test`.
+Set değiştirince `docker compose up -d --force-recreate stream-processor`.
+Host portları yalnız loopback (`127.0.0.1`).
 
 ```bash
 pytest -m unit
@@ -93,7 +96,14 @@ NASA IMS Bearing Dataset — 20 kHz örnekleme ile gerçek ivmeölçer (titreşi
 
 Bunlar bilinçli kapsam kararlarıdır, ADR'lerde kayıtlıdır:
 
-- **Tespit genelleşiyor, teşhis genelleşmiyor.** Z-Score tabanlı anomali *tespiti* iki sette, üç arıza tipinde yeniden kalibrasyonsuz çalışıyor. Arıza *tipi teşhisi* (ham-rFFT, envelope enerji, tepe belirginliği) denendi ve kapandı: belirginlik yanlış etiketi indirdi, teşhis edilebilirliği ve alarm-çapalı pencereyi bu Set 1/Set 2 çiftinde çözmedi (ADR-0011–0013, ADR-0015). Canlı `fault_type` yok.
+- **Güvenlik:** Yerel demo tehdit modeli (güvenilen tek makine). Portlar loopback;
+  mTLS/SASL/Vault yok. Ayrıntı: [ADR-0016](docs/adr/0016-security-scope-local-demo.md).
+- **Teşhis:** ADR-0015 — belirginlik + yan bant yanlış etiket sorununu çözdü
+  (Set 1 orta pencere: 0 yanlış) ama teşhis edilebilirliği çözmedi (arızalı
+  kanallar orta pencerede %100 belirsiz). Doğru etiket Z-Score tespitinden
+  290–900 snapshot sonra beliriyor; alarm-çapalı pencere bu çiftte çalışmaz.
+  `fault_type` canlıda kapalı.
+- **Tespit genelleşiyor, teşhis genelleşmiyor.** Z-Score tabanlı anomali *tespiti* iki sette, üç arıza tipinde yeniden kalibrasyonsuz çalışıyor. Arıza *tipi teşhisi* (ham-rFFT, envelope enerji, tepe belirginliği) denendi ve kapandı (ADR-0011–0013, ADR-0015). Canlı `fault_type` yok.
 - **ML katmanı sete özgü kalibrasyon istiyor.** Isolation Forest / PCA, Set 2'de güçlü (89 saat lead), ancak Set 1'de yeniden kalibrasyon olmadan gürültülü. Z-Score'un göreli ölçüsü (baseline'dan kaç sigma) sayesinde daha iyi genelleştiği gözlendi — basit, ilkeye dayalı yöntemin genelleme avantajı.
 - **Set 3 ile üçüncü hold-out** yapılmadı; kalibrasyonun tam genelliği ancak üçüncü bağımsız setle kesinleşir.
 
